@@ -1,0 +1,1633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>WOMS — Work Order Management System</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0F0F13;--surface:#17171E;--surface2:#1E1E28;--surface3:#26262F;
+  --border:#2E2E3A;--border2:#3A3A48;
+  --accent:#7C5CFC;--accent2:#5B3FD4;--accent-light:#A78BFA;
+  --orange:#F97316;--orange-light:#FDBA74;
+  --green:#10B981;--green-light:#6EE7B7;
+  --red:#EF4444;--red-light:#FCA5A5;
+  --amber:#F59E0B;--amber-light:#FCD34D;
+  --blue:#3B82F6;--blue-light:#93C5FD;
+  --teal:#14B8A6;--teal-light:#5EEAD4;
+  --text:#F1F0FF;--text2:#A09DB8;--text3:#6B6885;
+  --radius:10px;--radius-lg:16px;--radius-xl:24px;
+  --shadow:0 4px 24px rgba(0,0,0,.4);
+}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.5}
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--surface)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
+
+/* ── LOGIN ── */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(ellipse at 60% 0%,#1a0f3a 0%,var(--bg) 60%)}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:40px;max-width:420px;width:100%;box-shadow:var(--shadow)}
+.brand{display:flex;align-items:center;gap:12px;margin-bottom:32px}
+.brand-icon{width:44px;height:44px;background:linear-gradient(135deg,var(--accent),var(--orange));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff}
+.brand-name{font-size:20px;font-weight:700;letter-spacing:-.3px}
+.brand-sub{font-size:11px;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-top:2px}
+.login-title{font-size:26px;font-weight:700;letter-spacing:-.5px;margin-bottom:6px}
+.login-sub{font-size:13px;color:var(--text2);margin-bottom:28px}
+label{display:block;font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+input,select,textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:11px 14px;font-size:14px;color:var(--text);font-family:inherit;outline:none;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+select option{background:var(--surface2)}
+textarea{min-height:80px;resize:vertical}
+.form-group{margin-bottom:16px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.full{grid-column:1/-1}
+
+/* ── BUTTONS ── */
+.btn{border:0;border-radius:var(--radius);padding:10px 18px;font-weight:600;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;justify-content:center;transition:all .15s;font-family:inherit;white-space:nowrap}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+.btn-primary:hover{opacity:.9;transform:translateY(-1px)}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{border-color:var(--border2)}
+.btn-success{background:var(--green);color:#fff}
+.btn-danger{background:var(--red);color:#fff}
+.btn-warning{background:var(--amber);color:#fff}
+.btn-orange{background:var(--orange);color:#fff}
+.btn-sm{padding:7px 12px;font-size:12px}
+.btn-xs{padding:5px 10px;font-size:11px;border-radius:7px}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
+.btn-block{width:100%}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--surface2)}
+
+/* ── ERROR / ALERT ── */
+.alert{padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:14px;display:none}
+.alert-error{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:var(--red-light)}
+.alert-success{background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);color:var(--green-light)}
+.alert-info{background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.alert-warning{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:var(--amber-light)}
+
+/* ── APP SHELL ── */
+.app{display:none}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;background:var(--surface);border-right:1px solid var(--border);padding:20px 12px;display:flex;flex-direction:column;z-index:40}
+.sidebar-brand{display:flex;align-items:center;gap:10px;padding:0 8px;margin-bottom:28px}
+.sb-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--orange));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;flex-shrink:0}
+.sb-name{font-size:14px;font-weight:700}
+.sb-company{font-size:11px;color:var(--text3);margin-top:1px}
+.nav-section{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:0 8px;margin:16px 0 6px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text2);transition:all .15s;margin-bottom:2px}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:rgba(124,92,252,.15);color:var(--accent-light)}
+.nav-item .nav-icon{font-size:16px;width:20px;text-align:center}
+.nav-badge{margin-left:auto;background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:99px;min-width:18px;text-align:center}
+.sidebar-bottom{margin-top:auto}
+.user-card{background:var(--surface2);border-radius:var(--radius);padding:10px 12px;display:flex;align-items:center;gap:10px}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--orange));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.user-info{flex:1;min-width:0}
+.user-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-role{font-size:10px;color:var(--text3);text-transform:capitalize}
+.main{margin-left:220px;padding:28px;min-height:100vh}
+.page{display:none}
+.page.active{display:block}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:16px}
+.page-title{font-size:22px;font-weight:700;letter-spacing:-.4px}
+.page-sub{font-size:13px;color:var(--text2);margin-top:3px}
+
+/* ── CARDS ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:18px}
+.card-title{font-size:14px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card-title::before{content:'';width:3px;height:16px;border-radius:99px;background:linear-gradient(var(--accent),var(--orange));flex-shrink:0}
+
+/* ── STATS ── */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:22px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px;position:relative;overflow:hidden}
+.stat::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--c1),var(--c2))}
+.stat-num{font-size:28px;font-weight:700;letter-spacing:-1px;margin-bottom:2px}
+.stat-label{font-size:11px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:.4px}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:4px}
+
+/* ── TABLE ── */
+.table-wrap{overflow-x:auto;border-radius:var(--radius-lg);border:1px solid var(--border)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{background:var(--surface2);color:var(--text2);padding:11px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;border-bottom:1px solid var(--border)}
+td{padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text2)}
+td:first-child{color:var(--text);font-weight:500}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+.td-ref{font-family:'DM Mono',monospace;font-size:12px;color:var(--accent-light);white-space:nowrap}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;gap:4px;border-radius:99px;padding:3px 10px;font-size:11px;font-weight:600;white-space:nowrap}
+.badge::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
+.b-new{background:rgba(124,92,252,.15);color:var(--accent-light)}
+.b-review{background:rgba(59,130,246,.15);color:var(--blue-light)}
+.b-sow{background:rgba(20,184,166,.15);color:var(--teal-light)}
+.b-assigned{background:rgba(249,115,22,.15);color:var(--orange-light)}
+.b-inprogress{background:rgba(245,158,11,.15);color:var(--amber-light)}
+.b-proof{background:rgba(168,85,247,.15);color:#D8B4FE}
+.b-quoteprepared{background:rgba(59,130,246,.15);color:var(--blue-light)}
+.b-pending{background:rgba(245,158,11,.15);color:var(--amber-light)}
+.b-paid{background:rgba(16,185,129,.15);color:var(--green-light)}
+.b-complete{background:rgba(16,185,129,.2);color:var(--green-light)}
+.b-sent{background:rgba(20,184,166,.15);color:var(--teal-light)}
+.b-received{background:rgba(16,185,129,.15);color:var(--green-light)}
+.b-rejected{background:rgba(239,68,68,.15);color:var(--red-light)}
+.b-approved{background:rgba(16,185,129,.15);color:var(--green-light)}
+.b-winner{background:rgba(249,115,22,.2);color:var(--orange-light)}
+.b-low{background:rgba(107,104,133,.15);color:var(--text2)}
+.b-medium{background:rgba(59,130,246,.12);color:var(--blue-light)}
+.b-high{background:rgba(245,158,11,.15);color:var(--amber-light)}
+.b-emergency{background:rgba(239,68,68,.2);color:var(--red-light)}
+.b-gray{background:var(--surface2);color:var(--text2)}
+
+/* ── FILTERS ── */
+.filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+.filters input,.filters select{max-width:200px;padding:8px 12px;font-size:13px}
+.search-box{position:relative;flex:1;max-width:280px}
+.search-box input{padding-left:34px}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:16px}
+
+/* ── MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);width:100%;max-width:760px;max-height:90vh;overflow-y:auto;padding:28px;position:relative}
+.modal-sm{max-width:480px}
+.modal-close{position:absolute;right:20px;top:16px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;line-height:1}
+.modal-close:hover{color:var(--text)}
+.modal-title{font-size:18px;font-weight:700;margin-bottom:4px;padding-right:40px}
+.modal-sub{font-size:13px;color:var(--text2);margin-bottom:22px}
+.section-divider{border-top:1px solid var(--border);margin:20px 0}
+
+/* ── DETAIL GRID ── */
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 20px;margin-bottom:16px}
+.detail-item label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);display:block;margin-bottom:3px}
+.detail-value{font-size:13px;color:var(--text)}
+
+/* ── FILE UPLOAD ── */
+.file-drop{border:2px dashed var(--border);border-radius:var(--radius);padding:20px;text-align:center;cursor:pointer;transition:border-color .15s;color:var(--text3);font-size:13px}
+.file-drop:hover,.file-drop.drag{border-color:var(--accent);color:var(--accent-light)}
+.file-name{font-size:12px;color:var(--green-light);margin-top:8px;font-weight:500}
+.file-link{font-size:12px;color:var(--accent-light);text-decoration:none}
+.file-link:hover{text-decoration:underline}
+
+/* ── SLA TIMER ── */
+.sla-timer{display:inline-flex;align-items:center;gap:5px;font-family:'DM Mono',monospace;font-size:12px;padding:3px 9px;border-radius:99px;font-weight:500}
+.sla-ok{background:rgba(16,185,129,.12);color:var(--green-light)}
+.sla-warn{background:rgba(245,158,11,.12);color:var(--amber-light)}
+.sla-breach{background:rgba(239,68,68,.15);color:var(--red-light);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+
+/* ── TIMELINE ── */
+.timeline{padding:0}
+.tl-item{display:flex;gap:14px;margin-bottom:16px;position:relative}
+.tl-dot{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;margin-top:2px}
+.tl-dot-purple{background:rgba(124,92,252,.2);color:var(--accent-light)}
+.tl-dot-green{background:rgba(16,185,129,.2);color:var(--green-light)}
+.tl-dot-red{background:rgba(239,68,68,.2);color:var(--red-light)}
+.tl-dot-amber{background:rgba(245,158,11,.2);color:var(--amber-light)}
+.tl-dot-blue{background:rgba(59,130,246,.2);color:var(--blue-light)}
+.tl-content{flex:1;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.tl-item:last-child .tl-content{border-bottom:none}
+.tl-action{font-size:13px;font-weight:600;color:var(--text)}
+.tl-detail{font-size:12px;color:var(--text2);margin-top:2px}
+.tl-time{font-size:11px;color:var(--text3);margin-top:3px;font-family:'DM Mono',monospace}
+
+/* ── PROGRESS STEPS ── */
+.progress-steps{display:flex;align-items:center;margin-bottom:22px;overflow-x:auto;padding-bottom:4px}
+.step{display:flex;align-items:center;gap:0;flex-shrink:0}
+.step-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;position:relative}
+.step-dot.done{background:var(--green);color:#fff}
+.step-dot.active{background:var(--accent);color:#fff;box-shadow:0 0 0 4px rgba(124,92,252,.25)}
+.step-dot.todo{background:var(--surface2);color:var(--text3);border:1px solid var(--border)}
+.step-label{font-size:9px;color:var(--text3);margin-top:4px;white-space:nowrap;text-align:center;max-width:60px}
+.step-wrap{display:flex;flex-direction:column;align-items:center}
+.step-line{width:28px;height:2px;background:var(--border);flex-shrink:0}
+.step-line.done{background:var(--green)}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface);border:1px solid var(--border);color:var(--text);padding:12px 20px;border-radius:99px;font-size:13px;font-weight:500;z-index:200;transition:.25s;box-shadow:var(--shadow);display:flex;align-items:center;gap:8px}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.success{border-color:rgba(16,185,129,.4);background:rgba(16,185,129,.1)}
+.toast.error{border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.1)}
+.toast.warning{border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.1)}
+
+/* ── LOADING ── */
+.loading-overlay{display:none;position:fixed;inset:0;background:rgba(15,15,19,.8);z-index:180;align-items:center;justify-content:center;flex-direction:column;gap:14px;backdrop-filter:blur(4px)}
+.loading-overlay.show{display:flex}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:13px;color:var(--text2)}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:48px 24px;color:var(--text3)}
+.empty-icon{font-size:36px;margin-bottom:12px}
+.empty-title{font-size:14px;font-weight:600;color:var(--text2);margin-bottom:6px}
+.empty-sub{font-size:13px}
+
+/* ── CONTRACTOR CARDS ── */
+.contractor-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.contractor-card{border:1.5px solid var(--border);border-radius:var(--radius);padding:12px;cursor:pointer;transition:all .15s;position:relative}
+.contractor-card:hover{border-color:var(--border2)}
+.contractor-card.selected{border-color:var(--accent);background:rgba(124,92,252,.07)}
+.contractor-card .check{position:absolute;top:10px;right:10px;width:18px;height:18px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;display:none;align-items:center;justify-content:center}
+.contractor-card.selected .check{display:flex}
+.con-name{font-size:13px;font-weight:600;margin-bottom:2px}
+.con-meta{font-size:11px;color:var(--text3)}
+
+/* ── QUOTE COMPARE ── */
+.quote-compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.quote-card{border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:16px;transition:all .15s}
+.quote-card.winner{border-color:var(--orange);background:rgba(249,115,22,.06)}
+.quote-amount{font-size:24px;font-weight:700;color:var(--text);letter-spacing:-1px;margin:8px 0 4px}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .sidebar{width:100%;height:auto;position:relative;flex-direction:row;flex-wrap:wrap;border-right:none;border-bottom:1px solid var(--border)}
+  .main{margin-left:0}
+  .form-grid,.detail-grid{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(2,1fr)}
+}
+
+/* ── ROLE HEADER CHIPS ── */
+.role-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.role-super_admin{background:rgba(124,92,252,.2);color:var(--accent-light)}
+.role-admin{background:rgba(20,184,166,.15);color:var(--teal-light)}
+.role-pm{background:rgba(59,130,246,.15);color:var(--blue-light)}
+.role-contractor{background:rgba(245,158,11,.15);color:var(--amber-light)}
+.role-client{background:rgba(249,115,22,.15);color:var(--orange-light)}
+.role-tenant{background:rgba(168,85,247,.15);color:#D8B4FE}
+
+/* ── PROOF FILES ── */
+.proof-files{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.proof-file{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:6px 10px;font-size:12px;color:var(--accent-light);text-decoration:none;display:flex;align-items:center;gap:5px}
+.proof-file:hover{border-color:var(--accent)}
+
+/* ── FEEDBACK BOX ── */
+.feedback-box{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);border-radius:var(--radius);padding:12px;font-size:13px;color:var(--red-light);margin-top:8px}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:2px;background:var(--surface2);border-radius:var(--radius);padding:3px;margin-bottom:20px;width:fit-content}
+.tab{padding:7px 16px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text2);transition:all .15s}
+.tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.3)}
+
+/* ── ACTIONS ROW ── */
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+</style>
+</head>
+<body>
+
+<!-- ═══════ LOGIN ═══════ -->
+<div id="loginScreen" class="login-wrap">
+  <div class="login-card">
+    <div class="brand">
+      <div class="brand-icon">W</div>
+      <div>
+        <div class="brand-name">WOMS</div>
+        <div class="brand-sub">Work Order Management</div>
+      </div>
+    </div>
+    <div class="login-title">Welcome back</div>
+    <div class="login-sub">Sign in to your workspace</div>
+    <div id="loginErr" class="alert alert-error">Invalid email or password.</div>
+    <div class="form-group"><label>Email address</label><input id="loginEmail" type="email" placeholder="your@email.com"/></div>
+    <div class="form-group"><label>Password</label><input id="loginPwd" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+    <button class="btn btn-primary btn-block" onclick="doLogin()">Sign in →</button>
+    <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:700">Demo logins</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <button class="btn btn-xs btn-ghost" onclick="quickLogin('super@woms.com','Super@2026')">⚡ Super Admin</button>
+        <button class="btn btn-xs btn-ghost" onclick="quickLogin('admin@suncare.com','Admin@2026')">🏢 Admin</button>
+        <button class="btn btn-xs btn-ghost" onclick="quickLogin('pm@suncare.com','PM@2026')">📋 PM</button>
+        <button class="btn btn-xs btn-ghost" onclick="quickLogin('contractor@demo.com','Cont@2026')">🔧 Contractor</button>
+        <button class="btn btn-xs btn-ghost" onclick="quickLogin('client@suncare.com','Client@2026')">👤 Client</button>
+        <button class="btn btn-xs btn-ghost" onclick="quickLogin('tenant@suncare.com','Tenant@2026')">🏠 Tenant</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ APP ═══════ -->
+<div id="app" class="app">
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="sb-icon">W</div>
+      <div>
+        <div class="sb-name">WOMS</div>
+        <div class="sb-company" id="sbCompany">Loading...</div>
+      </div>
+    </div>
+    <div id="navItems"></div>
+    <div class="sidebar-bottom">
+      <div class="user-card">
+        <div class="user-avatar" id="userAvatar">?</div>
+        <div class="user-info">
+          <div class="user-name" id="userName">-</div>
+          <div class="user-role" id="userRole">-</div>
+        </div>
+        <button class="btn btn-xs btn-ghost" onclick="logout()" title="Sign out" style="padding:4px 6px">↩</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- ── DASHBOARD ── -->
+    <div id="page-dashboard" class="page">
+      <div class="page-header">
+        <div><div class="page-title">Dashboard</div><div class="page-sub" id="dashSub">Overview</div></div>
+        <button class="btn btn-secondary btn-sm" onclick="loadAll()">↻ Refresh</button>
+      </div>
+      <div class="stats" id="dashStats"></div>
+      <div class="card">
+        <div class="card-title">Recent work orders</div>
+        <div class="table-wrap"><table><thead><tr><th>Reference</th><th>Tenant</th><th>Category</th><th>Urgency</th><th>Status</th><th>SLA</th><th>Action</th></tr></thead>
+        <tbody id="dashWOTable"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ── WORK ORDERS ── -->
+    <div id="page-workorders" class="page">
+      <div class="page-header">
+        <div><div class="page-title">Work orders</div><div class="page-sub">All active and completed work orders</div></div>
+        <div class="actions">
+          <button class="btn btn-secondary btn-sm" onclick="loadAll()">↻ Refresh</button>
+          <button class="btn btn-primary btn-sm" id="btnNewWO" onclick="openModal('modalNewWO')" style="display:none">+ New request</button>
+        </div>
+      </div>
+      <div class="filters">
+        <div class="search-box"><span class="search-icon">⌕</span><input placeholder="Search tenant, location, reference..." oninput="renderWOTable()" id="woSearch"/></div>
+        <select id="woStatus" onchange="renderWOTable()"><option value="">All status</option><option>New</option><option>In Review</option><option>SOW Sent</option><option>Contractor Assigned</option><option>In Progress</option><option>Proof Submitted</option><option>Quote Prepared</option><option>Payment Pending</option><option>Paid</option><option>Complete</option></select>
+        <select id="woCategory" onchange="renderWOTable()"><option value="">All categories</option><option>Electrical</option><option>Plumbing</option><option>Carpentry</option><option>HVAC</option><option>General Maintenance</option><option>Other</option></select>
+        <select id="woUrgency" onchange="renderWOTable()"><option value="">All urgency</option><option>Low</option><option>Medium</option><option>High</option><option>Emergency</option></select>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Reference</th><th>Tenant</th><th>Location</th><th>Category</th><th>Urgency</th><th>Status</th><th>SLA</th><th>Raised</th><th>Action</th></tr></thead>
+      <tbody id="woTable"></tbody></table></div>
+    </div>
+
+    <!-- ── MY REQUESTS (tenant/client) ── -->
+    <div id="page-myrequests" class="page">
+      <div class="page-header">
+        <div><div class="page-title">My requests</div><div class="page-sub">Track your submitted work orders</div></div>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modalNewWO')">+ New request</button>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Reference</th><th>Description</th><th>Category</th><th>Urgency</th><th>Status</th><th>Date</th><th>Action</th></tr></thead>
+      <tbody id="myReqTable"></tbody></table></div>
+    </div>
+
+    <!-- ── MY JOBS (contractor) ── -->
+    <div id="page-myjobs" class="page">
+      <div class="page-header">
+        <div><div class="page-title">My jobs</div><div class="page-sub">Quote requests and assigned work orders</div></div>
+        <button class="btn btn-secondary btn-sm" onclick="loadAll()">↻ Refresh</button>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Reference</th><th>Description</th><th>Category</th><th>Status</th><th>My quote</th><th>Action</th></tr></thead>
+      <tbody id="myJobsTable"></tbody></table></div>
+    </div>
+
+    <!-- ── CONTRACTORS ── -->
+    <div id="page-contractors" class="page">
+      <div class="page-header">
+        <div><div class="page-title">Contractor pool</div><div class="page-sub">Manage your contractor database</div></div>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modalNewContractor')">+ Add contractor</button>
+      </div>
+      <div class="filters">
+        <div class="search-box"><span class="search-icon">⌕</span><input placeholder="Search contractors..." oninput="renderContractors()" id="conSearch"/></div>
+        <select id="conTrade" onchange="renderContractors()"><option value="">All trades</option><option>Electrical</option><option>Plumbing</option><option>Carpentry</option><option>HVAC</option><option>General Maintenance</option><option>Other</option></select>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Name</th><th>Business</th><th>Trade</th><th>Email</th><th>Phone</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody id="conTable"></tbody></table></div>
+    </div>
+
+    <!-- ── AUDIT LOG ── -->
+    <div id="page-audit" class="page">
+      <div class="page-header">
+        <div><div class="page-title">Audit log</div><div class="page-sub">Complete action trail</div></div>
+        <button class="btn btn-secondary btn-sm" onclick="loadAudit()">↻ Refresh</button>
+      </div>
+      <div class="card">
+        <div class="timeline" id="auditTimeline"><div class="empty"><div class="empty-icon">📋</div><div class="empty-title">No audit entries yet</div></div></div>
+      </div>
+    </div>
+
+    <!-- ── USERS (super admin / admin) ── -->
+    <div id="page-users" class="page">
+      <div class="page-header">
+        <div><div class="page-title">Users</div><div class="page-sub">Manage workspace users</div></div>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modalNewUser')">+ Add user</button>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Company</th><th>Status</th></tr></thead>
+      <tbody id="usersTable"></tbody></table></div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ═══════ MODALS ═══════ -->
+
+<!-- New Work Order -->
+<div id="modalNewWO" class="modal-overlay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modalNewWO')">×</button>
+    <div class="modal-title">New work order request</div>
+    <div class="modal-sub">Fill in the details and submit — PM will be notified immediately.</div>
+    <div id="newWOAlert" class="alert alert-error"></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Tenant name *</label><input id="fTenant"/></div>
+      <div class="form-group"><label>Unit / Space *</label><input id="fUnit"/></div>
+      <div class="form-group"><label>Location *</label><input id="fLocation" placeholder="e.g. Building A, Level 2"/></div>
+      <div class="form-group"><label>Category *</label><select id="fCategory"><option value="">Select</option><option>Electrical</option><option>Plumbing</option><option>Carpentry</option><option>HVAC</option><option>General Maintenance</option><option>Other</option></select></div>
+      <div class="form-group"><label>Urgency *</label><select id="fUrgency"><option>Low</option><option selected>Medium</option><option>High</option><option>Emergency</option></select></div>
+      <div class="form-group"><label>Ideal completion date</label><input id="fIdealDate" type="date"/></div>
+      <div class="form-group full"><label>Description *</label><textarea id="fDesc" placeholder="Describe the issue in detail..."></textarea></div>
+      <div class="form-group full">
+        <label>Attachments (photos, documents)</label>
+        <div class="file-drop" onclick="document.getElementById('fAttach').click()" id="attachDrop">📎 Click to upload photos or documents<div class="file-name" id="attachName"></div></div>
+        <input id="fAttach" type="file" style="display:none" multiple accept="image/*,.pdf,.doc,.docx" onchange="handleMultiFile(this,'attach')"/>
+      </div>
+    </div>
+    <div class="actions" style="justify-content:flex-end">
+      <button class="btn btn-secondary" onclick="closeModal('modalNewWO')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitNewWO()">Submit request →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Work Order Detail -->
+<div id="modalWODetail" class="modal-overlay">
+  <div class="modal" style="max-width:860px">
+    <button class="modal-close" onclick="closeModal('modalWODetail')">×</button>
+    <div id="woDetailContent"></div>
+  </div>
+</div>
+
+<!-- New Contractor -->
+<div id="modalNewContractor" class="modal-overlay">
+  <div class="modal modal-sm">
+    <button class="modal-close" onclick="closeModal('modalNewContractor')">×</button>
+    <div class="modal-title">Add contractor</div>
+    <div class="modal-sub">Add to the contractor pool for tendering.</div>
+    <div id="newConAlert" class="alert alert-error"></div>
+    <div class="form-group"><label>Full name *</label><input id="cName"/></div>
+    <div class="form-group"><label>Business name</label><input id="cBusiness"/></div>
+    <div class="form-group"><label>Trade *</label><select id="cTrade"><option value="">Select</option><option>Electrical</option><option>Plumbing</option><option>Carpentry</option><option>HVAC</option><option>General Maintenance</option><option>Other</option></select></div>
+    <div class="form-group"><label>Email *</label><input id="cEmail" type="email"/></div>
+    <div class="form-group"><label>Phone</label><input id="cPhone"/></div>
+    <div class="form-group"><label>Notes</label><textarea id="cNotes" style="min-height:60px"></textarea></div>
+    <div class="actions" style="justify-content:flex-end">
+      <button class="btn btn-secondary" onclick="closeModal('modalNewContractor')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveContractor()">Add contractor</button>
+    </div>
+  </div>
+</div>
+
+<!-- New User -->
+<div id="modalNewUser" class="modal-overlay">
+  <div class="modal modal-sm">
+    <button class="modal-close" onclick="closeModal('modalNewUser')">×</button>
+    <div class="modal-title">Add user</div>
+    <div class="form-group"><label>Full name *</label><input id="uName"/></div>
+    <div class="form-group"><label>Email *</label><input id="uEmail" type="email"/></div>
+    <div class="form-group"><label>Password *</label><input id="uPassword" type="text" placeholder="Temporary password"/></div>
+    <div class="form-group"><label>Role *</label><select id="uRole"><option value="">Select</option><option value="admin">Admin / GM</option><option value="pm">Project Manager</option><option value="contractor">Contractor</option><option value="client">Client</option><option value="tenant">Tenant</option></select></div>
+    <div class="form-group"><label>Company</label><select id="uCompany"></select></div>
+    <div class="actions" style="justify-content:flex-end">
+      <button class="btn btn-secondary" onclick="closeModal('modalNewUser')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveUser()">Create user</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast & Loading -->
+<div id="toast" class="toast"></div>
+<div id="loadingOverlay" class="loading-overlay"><div class="spinner"></div><div class="loading-text" id="loadingText">Loading...</div></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby189xxQiYPHo3ai1H4fw2qtJTFE4Rb5gQL4ZTcoL5TcQnGN3U46ej--iNFGfNoirnY/exec';
+
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let currentUser = null;
+let workOrders  = [];
+let contractors = [];
+let sowSends    = [];
+let quotes      = [];
+let companies   = [];
+let users       = [];
+let pendingFiles = {}; // { attach:[], sow:null, quote:null, proof:[], masterQuote:null }
+
+// ═══════════════════════════════════════════════════════
+// API
+// ═══════════════════════════════════════════════════════
+async function apiGet(action, params={}) {
+  const url = new URL(SCRIPT_URL);
+  url.searchParams.set('action', action);
+  Object.keys(params).forEach(k => { if(params[k]) url.searchParams.set(k, params[k]); });
+  const res = await fetch(url.toString());
+  return res.json();
+}
+
+async function apiPost(payload) {
+  const res = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  return res.json();
+}
+
+// ═══════════════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════════════
+function quickLogin(email, pw) {
+  document.getElementById('loginEmail').value = email;
+  document.getElementById('loginPwd').value   = pw;
+}
+
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pw    = document.getElementById('loginPwd').value;
+  if (!email || !pw) { showAlert('loginErr','Please enter email and password'); return; }
+  showLoading('Signing in...');
+  try {
+    const res = await apiPost({ action:'login', email, password:pw });
+    if (res.status === 'success') {
+      currentUser = res.user;
+      localStorage.setItem('womsUser', JSON.stringify(currentUser));
+      document.getElementById('loginErr').style.display = 'none';
+      showApp();
+    } else {
+      showAlert('loginErr', res.message || 'Invalid credentials');
+    }
+  } catch(e) { showAlert('loginErr','Connection error — check your network'); }
+  hideLoading();
+}
+
+function logout() {
+  currentUser = null;
+  localStorage.removeItem('womsUser');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+// ═══════════════════════════════════════════════════════
+// APP SHELL
+// ═══════════════════════════════════════════════════════
+function showApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  const u = currentUser;
+  document.getElementById('sbCompany').textContent  = u.companyName || '';
+  document.getElementById('userName').textContent   = u.name;
+  document.getElementById('userRole').textContent   = u.role.replace('_',' ');
+  document.getElementById('userAvatar').textContent = u.name.charAt(0).toUpperCase();
+  buildNav();
+  loadAll();
+}
+
+function buildNav() {
+  const role = currentUser.role;
+  const navDefs = {
+    super_admin: [
+      { id:'dashboard',   icon:'◈', label:'Dashboard' },
+      { id:'workorders',  icon:'📋', label:'Work orders' },
+      { id:'contractors', icon:'🔧', label:'Contractors' },
+      { id:'users',       icon:'👥', label:'Users' },
+      { id:'audit',       icon:'📊', label:'Audit log' },
+    ],
+    admin: [
+      { id:'dashboard',   icon:'◈', label:'Dashboard' },
+      { id:'workorders',  icon:'📋', label:'Work orders' },
+      { id:'contractors', icon:'🔧', label:'Contractors' },
+      { id:'users',       icon:'👥', label:'Users' },
+      { id:'audit',       icon:'📊', label:'Audit log' },
+    ],
+    pm: [
+      { id:'dashboard',   icon:'◈', label:'Dashboard' },
+      { id:'workorders',  icon:'📋', label:'Work orders' },
+      { id:'contractors', icon:'🔧', label:'Contractors' },
+      { id:'audit',       icon:'📊', label:'Audit log' },
+    ],
+    contractor: [
+      { id:'myjobs',      icon:'🔧', label:'My jobs' },
+      { id:'audit',       icon:'📊', label:'Activity' },
+    ],
+    client: [
+      { id:'dashboard',   icon:'◈', label:'Dashboard' },
+      { id:'myrequests',  icon:'📋', label:'My requests' },
+    ],
+    tenant: [
+      { id:'myrequests',  icon:'📋', label:'My requests' },
+    ],
+  };
+  const items = navDefs[role] || [];
+  document.getElementById('navItems').innerHTML = items.map(n =>
+    `<div class="nav-item" id="nav-${n.id}" onclick="showPage('${n.id}')">
+      <span class="nav-icon">${n.icon}</span>${n.label}
+    </div>`
+  ).join('');
+  // show new WO button for relevant roles
+  if(['admin','pm','client','tenant'].includes(role)) {
+    const btn = document.getElementById('btnNewWO');
+    if(btn) btn.style.display = 'flex';
+  }
+  // Show first page
+  showPage(items[0].id);
+}
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const pg = document.getElementById('page-'+id);
+  const nv = document.getElementById('nav-'+id);
+  if(pg) pg.classList.add('active');
+  if(nv) nv.classList.add('active');
+  if(id === 'audit') loadAudit();
+  if(id === 'users') renderUsers();
+}
+
+// ═══════════════════════════════════════════════════════
+// DATA LOAD
+// ═══════════════════════════════════════════════════════
+async function loadAll() {
+  showLoading('Loading data...');
+  try {
+    const u = currentUser;
+    const params = { companyId: u.companyId, role: u.role, userId: u.id };
+    if(u.role === 'contractor') params.contractorId = u.id;
+
+    const [woRes, conRes] = await Promise.all([
+      apiGet('getWorkOrders', params),
+      apiGet('getContractors', { companyId: u.companyId })
+    ]);
+
+    workOrders  = woRes.data  || [];
+    contractors = conRes.data || [];
+
+    if(['super_admin','admin'].includes(u.role)) {
+      const [cRes, uRes] = await Promise.all([
+        apiGet('getCompanies'),
+        apiGet('getUsers')
+      ]);
+      companies = cRes.data || [];
+      users     = uRes.data || [];
+      populateCompanySelect();
+    }
+
+    renderDashboard();
+    renderWOTable();
+    renderContractors();
+    renderMyRequests();
+    renderMyJobs();
+  } catch(e) { showToast('Failed to load data — check connection','error'); }
+  hideLoading();
+}
+
+async function loadAudit() {
+  showLoading('Loading audit log...');
+  try {
+    const res = await apiGet('getAuditLog', { companyId: currentUser.companyId });
+    renderAudit(res.data || []);
+  } catch(e) {}
+  hideLoading();
+}
+
+// ═══════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════
+function renderDashboard() {
+  const role = currentUser.role;
+  const wo   = workOrders;
+
+  let stats = [];
+  if(['super_admin','admin','pm'].includes(role)) {
+    const breached = wo.filter(w => w.Status === 'New' && new Date(w.SLADeadline) < new Date());
+    stats = [
+      { num: wo.length,                                              label:'Total', sub:'all work orders',        c1:'#7C5CFC',c2:'#A78BFA' },
+      { num: wo.filter(w=>w.Status==='New').length,                 label:'New',   sub:'awaiting PM action',      c1:'#7C5CFC',c2:'#5B3FD4' },
+      { num: breached.length,                                       label:'SLA breached', sub:'need attention',   c1:'#EF4444',c2:'#F97316' },
+      { num: wo.filter(w=>w.Status==='Proof Submitted').length,     label:'Proof review', sub:'pending PM',       c1:'#A855F7',c2:'#7C5CFC' },
+      { num: wo.filter(w=>w.Status==='Payment Pending').length,     label:'Awaiting payment', sub:'quote approved',c1:'#F59E0B',c2:'#F97316' },
+      { num: wo.filter(w=>w.Status==='Complete').length,            label:'Complete',sub:'closed',                c1:'#10B981',c2:'#14B8A6' },
+    ];
+  } else if(role === 'client') {
+    stats = [
+      { num: wo.length,                                             label:'My requests',   sub:'all time',       c1:'#7C5CFC',c2:'#A78BFA' },
+      { num: wo.filter(w=>w.Status==='Quote Prepared').length,      label:'Quotes ready',  sub:'approve now',    c1:'#F59E0B',c2:'#F97316' },
+      { num: wo.filter(w=>w.Status==='Complete').length,            label:'Complete',      sub:'closed',         c1:'#10B981',c2:'#14B8A6' },
+    ];
+  }
+
+  document.getElementById('dashStats').innerHTML = stats.map(s =>
+    `<div class="stat" style="--c1:${s.c1};--c2:${s.c2}">
+      <div class="stat-num">${s.num}</div>
+      <div class="stat-label">${s.label}</div>
+      <div class="stat-sub">${s.sub}</div>
+    </div>`
+  ).join('');
+
+  document.getElementById('dashSub').textContent =
+    `${currentUser.companyName} · ${new Date().toLocaleDateString('en-AU',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}`;
+
+  const recent = wo.slice(0,8);
+  document.getElementById('dashWOTable').innerHTML = recent.length
+    ? recent.map(w => woRowHTML(w)).join('')
+    : emptyRow(7,'No work orders yet');
+}
+
+// ═══════════════════════════════════════════════════════
+// WORK ORDER TABLE
+// ═══════════════════════════════════════════════════════
+function renderWOTable() {
+  const search   = (document.getElementById('woSearch')?.value||'').toLowerCase();
+  const status   = document.getElementById('woStatus')?.value||'';
+  const category = document.getElementById('woCategory')?.value||'';
+  const urgency  = document.getElementById('woUrgency')?.value||'';
+  let list = workOrders.filter(w => {
+    const sm = !search || [w.ReferenceNumber,w.TenantName,w.Location,w.Description]
+      .some(x=>String(x||'').toLowerCase().includes(search));
+    return sm
+      && (!status   || w.Status===status)
+      && (!category || w.Category===category)
+      && (!urgency  || w.Urgency===urgency);
+  });
+  const tb = document.getElementById('woTable');
+  if(tb) tb.innerHTML = list.length ? list.map(w=>woRowHTML(w)).join('') : emptyRow(9,'No work orders found');
+}
+
+function woRowHTML(w) {
+  const sla = slaHTML(w);
+  return `<tr>
+    <td><span class="td-ref">${w.ReferenceNumber||'—'}</span></td>
+    <td>${w.TenantName||'—'}</td>
+    <td>${w.Location||'—'}</td>
+    <td>${w.Category||'—'}</td>
+    <td>${urgencyBadge(w.Urgency)}</td>
+    <td>${statusBadge(w.Status)}</td>
+    <td>${sla}</td>
+    <td>${w.CreatedAt ? new Date(w.CreatedAt).toLocaleDateString('en-AU') : '—'}</td>
+    <td><button class="btn btn-xs btn-secondary" onclick="openWODetail('${w.WorkOrderID}')">View</button></td>
+  </tr>`;
+}
+
+function renderMyRequests() {
+  const tb = document.getElementById('myReqTable');
+  if(!tb) return;
+  const list = workOrders;
+  tb.innerHTML = list.length ? list.map(w=>`<tr>
+    <td><span class="td-ref">${w.ReferenceNumber||'—'}</span></td>
+    <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${w.Description||'—'}</td>
+    <td>${w.Category||'—'}</td>
+    <td>${urgencyBadge(w.Urgency)}</td>
+    <td>${statusBadge(w.Status)}</td>
+    <td>${w.CreatedAt ? new Date(w.CreatedAt).toLocaleDateString('en-AU') : '—'}</td>
+    <td><button class="btn btn-xs btn-secondary" onclick="openWODetail('${w.WorkOrderID}')">View</button></td>
+  </tr>`).join('') : emptyRow(7,'No requests yet — submit your first request using the button above');
+}
+
+async function renderMyJobs() {
+  const tb = document.getElementById('myJobsTable');
+  if(!tb) return;
+  try {
+    const sowRes = await apiGet('getSOWSends', { contractorId: currentUser.id });
+    const qtRes  = await apiGet('getQuotes',   { contractorId: currentUser.id });
+    const mySows = sowRes.data || [];
+    const myQts  = qtRes.data  || [];
+    if(!mySows.length) { tb.innerHTML = emptyRow(6,'No job invitations yet'); return; }
+    tb.innerHTML = mySows.map(s => {
+      const wo  = workOrders.find(w => w.WorkOrderID === s.WorkOrderID) || {};
+      const qt  = myQts.find(q => q.SOWSendID === s.SOWSendID);
+      const qAmt = qt ? '$'+qt.Amount : '—';
+      return `<tr>
+        <td><span class="td-ref">${wo.ReferenceNumber||'—'}</span></td>
+        <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${wo.Description||'—'}</td>
+        <td>${wo.Category||'—'}</td>
+        <td>${statusBadge(s.Status)}</td>
+        <td>${qAmt}</td>
+        <td><button class="btn btn-xs btn-secondary" onclick="openWODetail('${wo.WorkOrderID}')">View</button></td>
+      </tr>`;
+    }).join('');
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════
+// WORK ORDER DETAIL MODAL
+// ═══════════════════════════════════════════════════════
+async function openWODetail(woId) {
+  showLoading('Loading work order...');
+  try {
+    const wo = workOrders.find(w => w.WorkOrderID === woId) ||
+               (await apiGet('getWorkOrder',{workOrderId:woId})).data;
+    if(!wo) { showToast('Work order not found','error'); hideLoading(); return; }
+
+    const [sowRes, qtRes, prfRes, mqRes] = await Promise.all([
+      apiGet('getSOWSends',    { workOrderId: woId }),
+      apiGet('getQuotes',      { workOrderId: woId }),
+      apiGet('getProofs',      { workOrderId: woId }),
+      apiGet('getMasterQuote', { workOrderId: woId }),
+    ]);
+
+    const sows  = sowRes.data || [];
+    const qts   = qtRes.data  || [];
+    const prfs  = prfRes.data || [];
+    const mqs   = mqRes.data  || [];
+    const role  = currentUser.role;
+    const steps = ['New','In Review','SOW Sent','Contractor Assigned','In Progress','Proof Submitted','Quote Prepared','Payment Pending','Paid','Complete'];
+    const curIdx = steps.indexOf(wo.Status);
+
+    let html = `
+      <div class="modal-title">${wo.ReferenceNumber||'Work Order'}</div>
+      <div class="modal-sub">${wo.TenantName||''} · ${wo.Location||''} · ${wo.UnitSpace||''}</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+        ${statusBadge(wo.Status)} ${urgencyBadge(wo.Urgency)} <span class="role-chip role-${role}">${role.replace('_',' ')}</span>
+        ${slaHTML(wo)}
+      </div>
+
+      <!-- Progress -->
+      <div class="progress-steps">
+        ${steps.map((s,i) => `
+          <div class="step-wrap">
+            <div style="display:flex;align-items:center">
+              ${i>0 ? `<div class="step-line ${i<=curIdx?'done':''}"></div>` : ''}
+              <div class="step-dot ${i<curIdx?'done':i===curIdx?'active':'todo'}">${i<curIdx?'✓':i+1}</div>
+            </div>
+            <div class="step-label">${s}</div>
+          </div>`).join('')}
+      </div>
+
+      <!-- Details -->
+      <div class="detail-grid">
+        <div class="detail-item"><label>Category</label><div class="detail-value">${wo.Category||'—'}</div></div>
+        <div class="detail-item"><label>Raised by</label><div class="detail-value">${wo.RaisedByRole||'—'}</div></div>
+        <div class="detail-item"><label>Ideal completion</label><div class="detail-value">${wo.IdealCompletionDate||'—'}</div></div>
+        <div class="detail-item"><label>Created</label><div class="detail-value">${wo.CreatedAt ? new Date(wo.CreatedAt).toLocaleString('en-AU') : '—'}</div></div>
+      </div>
+      <div class="form-group"><label style="font-size:10px;color:var(--text3)">Description</label><div style="font-size:13px;color:var(--text2);line-height:1.6">${wo.Description||'—'}</div></div>
+      ${wo.AttachmentURLs ? `<div style="margin-top:8px"><label style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.5px">Request attachments</label><div class="proof-files">${wo.AttachmentURLs.split(',').filter(u=>u).map(u=>`<a class="proof-file" href="${u}" target="_blank">📎 View file</a>`).join('')}</div></div>` : ''}
+      ${wo.SOWFileURL ? `<div style="margin-top:8px"><label style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.5px">SOW Document</label><div class="proof-files"><a class="proof-file" href="${wo.SOWFileURL}" target="_blank">📄 View SOW</a></div></div>` : ''}
+    `;
+
+    // ── PM ACTIONS ──
+    if(role === 'pm') {
+      if(wo.Status === 'New' || wo.Status === 'In Review') {
+        html += `<div class="section-divider"></div>
+        <div class="card-title">PM action — Start review & upload SOW</div>
+        <div class="form-group"><label>Upload SOW document</label>
+          <div class="file-drop" onclick="document.getElementById('sowFileInput').click()">📄 Click to upload SOW (PDF/Word)<div class="file-name" id="sowFileName"></div></div>
+          <input id="sowFileInput" type="file" style="display:none" accept=".pdf,.doc,.docx" onchange="handleSingleFile(this,'sow')"/>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="pmStartReview('${wo.WorkOrderID}','${wo.ReferenceNumber}','${wo.CompanyID}')">Start review</button>
+        </div>`;
+      }
+
+      if(['In Review','SOW Sent'].includes(wo.Status)) {
+        const tradeCons = contractors.filter(c => c.Trade === wo.Category);
+        html += `<div class="section-divider"></div>
+        <div class="card-title">Send SOW to contractors</div>
+        ${wo.SOWFileURL ? `<div style="margin-bottom:10px"><a class="proof-file" href="${wo.SOWFileURL}" target="_blank">📄 Current SOW</a></div>` : ''}
+        <div class="form-group"><label>Quote due date</label><input id="sowDueDate" type="date"/></div>
+        <div style="margin-bottom:12px">
+          ${tradeCons.length ? `<div style="font-size:12px;color:var(--text3);margin-bottom:8px">${wo.Category} contractors</div>
+          <div class="contractor-grid">${tradeCons.map(c=>`
+            <div class="contractor-card" onclick="toggleContractor(this)" data-id="${c.ContractorID}" data-name="${esc(c.Name)}" data-email="${esc(c.Email)}" data-trade="${esc(c.Trade)}">
+              <div class="check">✓</div>
+              <div class="con-name">${c.Name}</div>
+              <div class="con-meta">${c.BusinessName||''} · ${c.Trade}</div>
+              <div class="con-meta" style="margin-top:3px">${c.Email}</div>
+            </div>`).join('')}</div>` : '<div class="alert alert-warning" style="display:block">No '+wo.Category+' contractors in pool — add some first.</div>'}
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="pmSendSOW('${wo.WorkOrderID}','${wo.ReferenceNumber}','${wo.CompanyID}','${wo.Category}','${esc(wo.Description)}','${esc(wo.Location)}')">Send SOW →</button>
+        </div>`;
+      }
+
+      if(wo.Status === 'SOW Sent' || wo.Status === 'Contractor Assigned') {
+        html += `<div class="section-divider"></div>
+        <div class="card-title">Quote comparison</div>
+        ${qts.length ? `<div class="quote-compare">${qts.map(q=>`
+          <div class="quote-card ${q.IsWinner?'winner':''}">
+            ${q.IsWinner ? '<div style="margin-bottom:6px">'+winnerBadge()+'</div>' : ''}
+            <div style="font-size:13px;font-weight:600">${q.ContractorName}</div>
+            <div class="quote-amount">$${Number(q.Amount).toLocaleString()}</div>
+            <div style="font-size:11px;color:var(--text3)">${q.GSTStatus}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:4px">${q.StartDate||'—'} → ${q.EndDate||'—'}</div>
+            ${q.Notes ? `<div style="font-size:12px;color:var(--text2);margin-top:6px">${q.Notes}</div>` : ''}
+            ${q.FileURL ? `<a class="proof-file" href="${q.FileURL}" target="_blank" style="margin-top:8px">📎 Quote doc</a>` : ''}
+            ${!q.IsWinner ? `<button class="btn btn-xs btn-orange" style="margin-top:10px;width:100%" onclick="pmSelectWinner('${q.QuoteID}','${wo.WorkOrderID}','${wo.ReferenceNumber}','${wo.CompanyID}','${esc(q.ContractorName)}','${q.ContractorID}','${q.Amount}')">Select winner</button>` : ''}
+          </div>`).join('')}</div>` : '<div style="font-size:13px;color:var(--text3)">No quotes received yet.</div>'}
+        <div class="section-divider"></div>
+        <div class="card-title">Log quote manually (received by email)</div>
+        <div class="form-grid">
+          <div class="form-group"><label>Contractor</label><select id="mConSelect">${sows.map(s=>`<option value="${s.ContractorID}|${esc(s.ContractorName)}|${s.SOWSendID}">${s.ContractorName}</option>`).join('')}</select></div>
+          <div class="form-group"><label>Amount ($)</label><input id="mAmount" type="number" placeholder="0.00"/></div>
+          <div class="form-group"><label>GST</label><select id="mGST"><option>GST Included</option><option>GST Excluded</option><option>Not Applicable</option></select></div>
+          <div class="form-group"><label>Start date</label><input id="mStart" type="date"/></div>
+          <div class="form-group"><label>End date</label><input id="mEnd" type="date"/></div>
+          <div class="form-group full"><label>Notes</label><textarea id="mNotes" style="min-height:60px"></textarea></div>
+          <div class="form-group full"><label>Quote document</label>
+            <div class="file-drop" onclick="document.getElementById('quoteFileInput').click()">📎 Upload quote PDF<div class="file-name" id="quoteFileName"></div></div>
+            <input id="quoteFileInput" type="file" style="display:none" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onchange="handleSingleFile(this,'quote')"/>
+          </div>
+        </div>
+        <button class="btn btn-success btn-sm" onclick="pmLogQuote('${wo.WorkOrderID}','${wo.CompanyID}')">Log quote</button>`;
+      }
+
+      if(wo.Status === 'Proof Submitted') {
+        const latestProof = prfs[prfs.length-1];
+        if(latestProof && latestProof.Status === 'Pending PM Review') {
+          const fileLinks = latestProof.FileURLs ? latestProof.FileURLs.split(',').filter(u=>u) : [];
+          html += `<div class="section-divider"></div>
+          <div class="card-title">Proof review — Submission #${latestProof.SubmissionNum}</div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:8px">Submitted: ${new Date(latestProof.SubmittedAt).toLocaleString('en-AU')}</div>
+          ${fileLinks.length ? `<div class="proof-files">${fileLinks.map(u=>`<a class="proof-file" href="${u}" target="_blank">📎 View file</a>`).join('')}</div>` : '<div style="font-size:13px;color:var(--text3)">No files uploaded.</div>'}
+          <div class="form-group" style="margin-top:14px"><label>Rejection reason (if rejecting)</label><textarea id="proofFeedback" style="min-height:60px" placeholder="Describe what additional evidence is needed..."></textarea></div>
+          <div class="actions">
+            <button class="btn btn-success" onclick="pmReviewProof('${latestProof.ProofID}','${wo.WorkOrderID}','${wo.ReferenceNumber}','${wo.CompanyID}','approve')">✓ Approve proof</button>
+            <button class="btn btn-danger" onclick="pmReviewProof('${latestProof.ProofID}','${wo.WorkOrderID}','${wo.ReferenceNumber}','${wo.CompanyID}','reject')">✗ Reject</button>
+          </div>`;
+        }
+      }
+
+      if(wo.Status === 'Paid') {
+        const woObj = wo;
+        html += `<div class="section-divider"></div>
+        <div class="card-title">Close project</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Payment confirmed by Admin. Mark this project as complete to notify the tenant and client.</div>
+        <div class="form-group"><label>Tenant email (for notification)</label><input id="tenantEmailClose" placeholder="tenant@example.com"/></div>
+        <div class="form-group"><label>Tenant name</label><input id="tenantNameClose" value="${esc(wo.TenantName)}"/></div>
+        <button class="btn btn-success" onclick="pmMarkComplete('${wo.WorkOrderID}','${wo.ReferenceNumber}','${wo.CompanyID}')">✓ Mark project complete</button>`;
+      }
+    }
+
+    // ── ADMIN ACTIONS ──
+    if(role === 'admin' || role === 'super_admin') {
+      if(wo.Status === 'In Progress') {
+        html += `<div class="section-divider"></div>
+        <div class="card-title">Upload master quote</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:12px">PM has approved the proof. Prepare your company-branded quote and upload it here.</div>
+        <div class="form-grid">
+          <div class="form-group"><label>Quote amount ($) *</label><input id="mqAmount" type="number" placeholder="0.00"/></div>
+          <div class="form-group full"><label>Master quote document *</label>
+            <div class="file-drop" onclick="document.getElementById('mqFileInput').click()">📄 Upload master quote PDF<div class="file-name" id="mqFileName"></div></div>
+            <input id="mqFileInput" type="file" style="display:none" accept=".pdf,.doc,.docx" onchange="handleSingleFile(this,'masterQuote')"/>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="adminUploadMQ('${wo.WorkOrderID}','${wo.ReferenceNumber}','${wo.CompanyID}')">Upload & send to client →</button>`;
+      }
+
+      if(wo.Status === 'Payment Pending') {
+        html += `<div class="section-divider"></div>
+        <div class="card-title">Mark payment received</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Client has approved the quote. Once payment is received outside the system, mark it here to notify the PM.</div>
+        <button class="btn btn-success" onclick="adminMarkPaid('${wo.WorkOrderID}','${wo.ReferenceNumber}','${wo.CompanyID}')">✓ Mark as paid</button>`;
+      }
+
+      // Show all quotes & proofs for admin visibility
+      if(qts.length) {
+        html += `<div class="section-divider"></div><div class="card-title">Quotes received</div>
+        <div class="quote-compare">${qts.map(q=>`
+          <div class="quote-card ${q.IsWinner?'winner':''}">
+            ${q.IsWinner ? '<div style="margin-bottom:6px">'+winnerBadge()+'</div>' : ''}
+            <div style="font-size:13px;font-weight:600">${q.ContractorName}</div>
+            <div class="quote-amount">$${Number(q.Amount).toLocaleString()}</div>
+            <div style="font-size:11px;color:var(--text3)">${q.GSTStatus}</div>
+            ${q.FileURL ? `<a class="proof-file" href="${q.FileURL}" target="_blank" style="margin-top:8px">📎 Quote doc</a>` : ''}
+          </div>`).join('')}</div>`;
+      }
+      if(prfs.length) {
+        html += `<div class="section-divider"></div><div class="card-title">Proof submissions</div>`;
+        prfs.forEach(p => {
+          const fileLinks = p.FileURLs ? p.FileURLs.split(',').filter(u=>u) : [];
+          html += `<div style="margin-bottom:12px;padding:12px;background:var(--surface2);border-radius:var(--radius)">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <span style="font-size:13px;font-weight:600">Submission #${p.SubmissionNum}</span> ${statusBadge(p.Status)}
+            </div>
+            <div style="font-size:12px;color:var(--text3)">${new Date(p.SubmittedAt).toLocaleString('en-AU')}</div>
+            ${p.PMFeedback ? `<div class="feedback-box">Feedback: ${p.PMFeedback}</div>` : ''}
+            ${fileLinks.length ? `<div class="proof-files">${fileLinks.map(u=>`<a class="proof-file" href="${u}" target="_blank">📎 File</a>`).join('')}</div>` : ''}
+          </div>`;
+        });
+      }
+      if(mqs.length) {
+        const mq = mqs[mqs.length-1];
+        html += `<div class="section-divider"></div><div class="card-title">Master quote</div>
+        <div style="font-size:24px;font-weight:700;color:var(--text);margin-bottom:6px">$${Number(mq.Amount).toLocaleString()}</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Client approved: ${mq.ClientApproved ? '✓ Yes — '+new Date(mq.ApprovedAt).toLocaleString('en-AU') : 'Pending'}</div>
+        ${mq.FileURL ? `<a class="proof-file" href="${mq.FileURL}" target="_blank">📄 Quote document</a>` : ''}`;
+      }
+    }
+
+    // ── CLIENT ACTIONS ──
+    if(role === 'client') {
+      if(wo.Status === 'Quote Prepared' && mqs.length) {
+        const mq = mqs[mqs.length-1];
+        html += `<div class="section-divider"></div>
+        <div class="card-title">Review & approve master quote</div>
+        <div style="font-size:32px;font-weight:700;color:var(--text);margin-bottom:4px">$${Number(mq.Amount).toLocaleString()}</div>
+        <div style="font-size:13px;color:var(--text3);margin-bottom:12px">Prepared by ${currentUser.companyName}</div>
+        ${mq.FileURL ? `<div style="margin-bottom:14px"><a class="proof-file" href="${mq.FileURL}" target="_blank">📄 View quote document</a></div>` : ''}
+        <div class="actions">
+          <button class="btn btn-success" onclick="clientApproveQuote('${mq.MasterQuoteID}','${wo.WorkOrderID}','${wo.ReferenceNumber}','${wo.CompanyID}','${mq.Amount}')">✓ Approve quote</button>
+        </div>`;
+      }
+    }
+
+    // ── CONTRACTOR ACTIONS ──
+    if(role === 'contractor') {
+      const mySow = sows.find(s => s.ContractorID === currentUser.id);
+      const myQt  = qts.find(q => q.ContractorID === currentUser.id);
+      const myPrf = prfs.filter(p => p.ContractorID === currentUser.id);
+      const latestPrf = myPrf[myPrf.length-1];
+
+      if(mySow && !myQt) {
+        html += `<div class="section-divider"></div>
+        <div class="card-title">Submit your quote</div>
+        <div class="form-grid">
+          <div class="form-group"><label>Amount ($) *</label><input id="cqAmount" type="number" placeholder="0.00"/></div>
+          <div class="form-group"><label>GST status</label><select id="cqGST"><option>GST Included</option><option>GST Excluded</option><option>Not Applicable</option></select></div>
+          <div class="form-group"><label>Estimated start</label><input id="cqStart" type="date"/></div>
+          <div class="form-group"><label>Estimated end</label><input id="cqEnd" type="date"/></div>
+          <div class="form-group full"><label>Notes</label><textarea id="cqNotes" style="min-height:60px" placeholder="Any conditions or notes..."></textarea></div>
+          <div class="form-group full"><label>Quote document</label>
+            <div class="file-drop" onclick="document.getElementById('cqFileInput').click()">📎 Upload your quote PDF<div class="file-name" id="cqFileName"></div></div>
+            <input id="cqFileInput" type="file" style="display:none" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onchange="handleSingleFile(this,'quote')"/>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="conSubmitQuote('${wo.WorkOrderID}','${wo.CompanyID}','${mySow.SOWSendID}')">Submit quote →</button>`;
+      }
+
+      if(myQt) {
+        html += `<div class="section-divider"></div>
+        <div class="card-title">Your quote</div>
+        <div style="font-size:24px;font-weight:700;color:var(--text)">$${Number(myQt.Amount).toLocaleString()}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:4px">${myQt.GSTStatus} · ${myQt.StartDate||'—'} → ${myQt.EndDate||'—'}</div>
+        ${myQt.IsWinner ? '<div style="margin-top:8px">'+winnerBadge()+' <span style="font-size:13px;color:var(--orange-light);margin-left:6px">You were selected!</span></div>' : ''}`;
+      }
+
+      if(['Contractor Assigned','In Progress'].includes(wo.Status) && myQt?.IsWinner) {
+        const rejectedPrf = latestPrf && latestPrf.Status === 'Rejected';
+        html += `<div class="section-divider"></div>
+        <div class="card-title">${rejectedPrf ? 'Resubmit proof' : 'Submit proof of completion'}</div>
+        ${rejectedPrf ? `<div class="feedback-box" style="margin-bottom:12px">Rejected — Reason: ${latestPrf.PMFeedback}</div>` : ''}
+        <div class="form-group"><label>Upload proof photos and invoice</label>
+          <div class="file-drop" onclick="document.getElementById('proofFileInput').click()">📸 Upload photos and invoice (multiple files)<div class="file-name" id="proofFileName"></div></div>
+          <input id="proofFileInput" type="file" style="display:none" multiple accept="image/*,.pdf,.doc,.docx" onchange="handleMultiFile(this,'proof')"/>
+        </div>
+        <button class="btn btn-primary" onclick="conSubmitProof('${wo.WorkOrderID}','${wo.ReferenceNumber}','${wo.CompanyID}')">Submit proof →</button>`;
+      }
+    }
+
+    // ── AUDIT TRAIL (all roles) ──
+    try {
+      const auditRes = await apiGet('getAuditLog', { workOrderId: woId });
+      const entries  = auditRes.data || [];
+      if(entries.length) {
+        html += `<div class="section-divider"></div>
+        <div class="card-title">Activity trail</div>
+        <div class="timeline">${entries.map(e => {
+          const col = auditDotColor(e.Action);
+          return `<div class="tl-item">
+            <div class="tl-dot tl-dot-${col}">●</div>
+            <div class="tl-content">
+              <div class="tl-action">${formatAction(e.Action)}</div>
+              ${e.Detail ? `<div class="tl-detail">${e.Detail}</div>` : ''}
+              <div class="tl-time">${e.ActorRole} · ${e.CreatedAt ? new Date(e.CreatedAt).toLocaleString('en-AU') : ''}</div>
+            </div>
+          </div>`;
+        }).join('')}</div>`;
+      }
+    } catch(e) {}
+
+    document.getElementById('woDetailContent').innerHTML = html;
+    openModal('modalWODetail');
+  } catch(e) { showToast('Error loading work order','error'); console.error(e); }
+  hideLoading();
+}
+
+// ═══════════════════════════════════════════════════════
+// PM ACTIONS
+// ═══════════════════════════════════════════════════════
+async function pmStartReview(woId, ref, companyId) {
+  showLoading('Updating status...');
+  let sowUrl = '';
+  if(pendingFiles.sow) {
+    showLoading('Uploading SOW...');
+    const up = await uploadFile(pendingFiles.sow, 'sow');
+    sowUrl = up.fileUrl || '';
+  }
+  await apiPost({ action:'updateStatus', workOrderId:woId, companyId, status:'In Review',
+    actorId:currentUser.id, actorRole:'pm', referenceNumber:ref, sowFileURL:sowUrl });
+  pendingFiles.sow = null;
+  showToast('Status updated to In Review','success');
+  await loadAll();
+  closeModal('modalWODetail');
+  openWODetail(woId);
+  hideLoading();
+}
+
+async function pmSendSOW(woId, ref, companyId, category, desc, location) {
+  const selected = Array.from(document.querySelectorAll('.contractor-card.selected'));
+  if(!selected.length) { showToast('Select at least one contractor','warning'); return; }
+  const dueDate = document.getElementById('sowDueDate').value;
+  const cons    = selected.map(el => ({
+    contractorId: el.dataset.id, name: el.dataset.name,
+    email: el.dataset.email, trade: el.dataset.trade
+  }));
+  let sowUrl = '';
+  if(pendingFiles.sow) {
+    showLoading('Uploading SOW...');
+    const up = await uploadFile(pendingFiles.sow, 'sow');
+    sowUrl = up.fileUrl || '';
+  }
+  showLoading('Sending SOW to contractors...');
+  const res = await apiPost({ action:'sendSOW', workOrderId:woId, companyId, referenceNumber:ref,
+    category, description:desc, location, dueDate, contractors:cons,
+    sowFileURL:sowUrl, actorId:currentUser.id });
+  if(res.status === 'success') {
+    showToast('SOW sent to '+cons.length+' contractor(s)','success');
+    pendingFiles.sow = null;
+    await loadAll(); closeModal('modalWODetail'); openWODetail(woId);
+  } else showToast(res.message||'Send failed','error');
+  hideLoading();
+}
+
+async function pmLogQuote(woId, companyId) {
+  const sel = document.getElementById('mConSelect');
+  const [cid, cname, sowId] = (sel.value||'').split('|');
+  const amount = document.getElementById('mAmount').value;
+  if(!amount) { showToast('Enter amount','warning'); return; }
+  let fileUrl = '';
+  if(pendingFiles.quote) {
+    showLoading('Uploading quote...');
+    const up = await uploadFile(pendingFiles.quote, 'quotes');
+    fileUrl = up.fileUrl || '';
+  }
+  showLoading('Logging quote...');
+  const res = await apiPost({ action:'submitQuote', workOrderId:woId, companyId,
+    sowSendId:sowId, contractorId:cid, contractorName:cname,
+    amount, gstStatus:document.getElementById('mGST').value,
+    startDate:document.getElementById('mStart').value,
+    endDate:document.getElementById('mEnd').value,
+    notes:document.getElementById('mNotes').value,
+    fileURL:fileUrl, enteredBy:'manual' });
+  if(res.status === 'success') {
+    showToast('Quote logged','success');
+    pendingFiles.quote = null;
+    await loadAll(); closeModal('modalWODetail'); openWODetail(woId);
+  } else showToast(res.message||'Failed','error');
+  hideLoading();
+}
+
+async function pmSelectWinner(qtId, woId, ref, companyId, cName, cId, amount) {
+  if(!confirm('Select '+cName+' as the winning contractor?')) return;
+  showLoading('Selecting winner...');
+  const con = contractors.find(c => c.ContractorID === cId) || {};
+  const res = await apiPost({ action:'selectWinner', quoteId:qtId, workOrderId:woId,
+    companyId, referenceNumber:ref, contractorId:cId, contractorName:cName,
+    contractorEmail:con.Email||'', amount, actorId:currentUser.id });
+  if(res.status === 'success') {
+    showToast(cName+' selected as winner','success');
+    await loadAll(); closeModal('modalWODetail'); openWODetail(woId);
+  } else showToast(res.message||'Failed','error');
+  hideLoading();
+}
+
+async function pmReviewProof(proofId, woId, ref, companyId, decision) {
+  const feedback = document.getElementById('proofFeedback')?.value || '';
+  if(decision === 'reject' && !feedback.trim()) {
+    showToast('Please enter rejection reason','warning'); return;
+  }
+  const woObj = workOrders.find(w => w.WorkOrderID === woId) || {};
+  const winQt = (await apiGet('getQuotes',{workOrderId:woId})).data?.find(q=>String(q.IsWinner)==='true');
+  const con = contractors.find(c => c.ContractorID === winQt?.ContractorID) || {};
+  showLoading(decision==='approve'?'Approving proof...':'Rejecting proof...');
+  const res = await apiPost({ action:'reviewProof', proofId, workOrderId:woId, companyId,
+    referenceNumber:ref, decision, feedback,
+    contractorEmail:con.Email||winQt?.ContractorID||'',
+    contractorName:con.Name||winQt?.ContractorName||'',
+    actorId:currentUser.id });
+  if(res.status === 'success') {
+    showToast(decision==='approve'?'Proof approved — Admin notified':'Proof rejected — Contractor notified',
+      decision==='approve'?'success':'warning');
+    await loadAll(); closeModal('modalWODetail'); openWODetail(woId);
+  } else showToast(res.message||'Failed','error');
+  hideLoading();
+}
+
+async function pmMarkComplete(woId, ref, companyId) {
+  const tenantEmail = document.getElementById('tenantEmailClose')?.value||'';
+  const tenantName  = document.getElementById('tenantNameClose')?.value||'';
+  showLoading('Closing project...');
+  const res = await apiPost({ action:'markComplete', workOrderId:woId, companyId,
+    referenceNumber:ref, tenantEmail, tenantName, actorId:currentUser.id });
+  if(res.status === 'success') {
+    showToast('Project marked complete — all parties notified','success');
+    await loadAll(); closeModal('modalWODetail');
+  } else showToast(res.message||'Failed','error');
+  hideLoading();
+}
+
+// ═══════════════════════════════════════════════════════
+// ADMIN ACTIONS
+// ═══════════════════════════════════════════════════════
+async function adminUploadMQ(woId, ref, companyId) {
+  const amount = document.getElementById('mqAmount')?.value;
+  if(!amount) { showToast('Enter quote amount','warning'); return; }
+  let fileUrl = '';
+  if(pendingFiles.masterQuote) {
+    showLoading('Uploading master quote...');
+    const up = await uploadFile(pendingFiles.masterQuote, 'masterQuotes');
+    fileUrl = up.fileUrl || '';
+    pendingFiles.masterQuote = null;
+  }
+  showLoading('Sending quote to client...');
+  const res = await apiPost({ action:'uploadMasterQuote', workOrderId:woId, companyId,
+    referenceNumber:ref, amount, fileURL:fileUrl, actorId:currentUser.id });
+  if(res.status === 'success') {
+    showToast('Master quote uploaded — client notified','success');
+    await loadAll(); closeModal('modalWODetail'); openWODetail(woId);
+  } else showToast(res.message||'Failed','error');
+  hideLoading();
+}
+
+async function adminMarkPaid(woId, ref, companyId) {
+  if(!confirm('Confirm payment received for '+ref+'?')) return;
+  showLoading('Marking as paid...');
+  const res = await apiPost({ action:'markPaid', workOrderId:woId, companyId,
+    referenceNumber:ref, actorId:currentUser.id });
+  if(res.status === 'success') {
+    showToast('Marked as paid — PM notified','success');
+    await loadAll(); closeModal('modalWODetail'); openWODetail(woId);
+  } else showToast(res.message||'Failed','error');
+  hideLoading();
+}
+
+// ═══════════════════════════════════════════════════════
+// CLIENT ACTIONS
+// ═══════════════════════════════════════════════════════
+async function clientApproveQuote(mqId, woId, ref, companyId, amount) {
+  if(!confirm('Approve this quote for $'+Number(amount).toLocaleString()+'?')) return;
+  showLoading('Approving quote...');
+  const res = await apiPost({ action:'approveQuote', masterQuoteId:mqId, workOrderId:woId,
+    companyId, referenceNumber:ref, amount, actorId:currentUser.id });
+  if(res.status === 'success') {
+    showToast('Quote approved — Admin notified','success');
+    await loadAll(); closeModal('modalWODetail'); openWODetail(woId);
+  } else showToast(res.message||'Failed','error');
+  hideLoading();
+}
+
+// ═══════════════════════════════════════════════════════
+// CONTRACTOR ACTIONS
+// ═══════════════════════════════════════════════════════
+async function conSubmitQuote(woId, companyId, sowId) {
+  const amount = document.getElementById('cqAmount')?.value;
+  if(!amount) { showToast('Enter your quote amount','warning'); return; }
+  let fileUrl = '';
+  if(pendingFiles.quote) {
+    showLoading('Uploading quote document...');
+    const up = await uploadFile(pendingFiles.quote, 'quotes');
+    fileUrl = up.fileUrl || '';
+    pendingFiles.quote = null;
+  }
+  showLoading('Submitting quote...');
+  const res = await apiPost({ action:'submitQuote', workOrderId:woId, companyId, sowSendId:sowId,
+    contractorId:currentUser.id, contractorName:currentUser.name,
+    amount, gstStatus:document.getElementById('cqGST').value,
+    startDate:document.getElementById('cqStart').value,
+    endDate:document.getElementById('cqEnd').value,
+    notes:document.getElementById('cqNotes').value,
+    fileURL:fileUrl, enteredBy:'app' });
+  if(res.status === 'success') {
+    showToast('Quote submitted successfully','success');
+    await loadAll(); closeModal('modalWODetail'); openWODetail(woId);
+  } else showToast(res.message||'Failed','error');
+  hideLoading();
+}
+
+async function conSubmitProof(woId, ref, companyId) {
+  if(!pendingFiles.proof?.length) { showToast('Upload at least one proof file','warning'); return; }
+  showLoading('Uploading proof files...');
+  const urls = [];
+  for(const f of pendingFiles.proof) {
+    const up = await uploadFile(f, 'proof');
+    if(up.fileUrl) urls.push(up.fileUrl);
+  }
+  showLoading('Submitting proof...');
+  const res = await apiPost({ action:'submitProof', workOrderId:woId, companyId,
+    referenceNumber:ref, contractorId:currentUser.id, contractorName:currentUser.name,
+    fileURLs:urls });
+  if(res.status === 'success') {
+    showToast('Proof submitted — PM notified','success');
+    pendingFiles.proof = [];
+    await loadAll(); closeModal('modalWODetail'); openWODetail(woId);
+  } else showToast(res.message||'Failed','error');
+  hideLoading();
+}
+
+// ═══════════════════════════════════════════════════════
+// NEW WORK ORDER
+// ═══════════════════════════════════════════════════════
+async function submitNewWO() {
+  const tenant   = document.getElementById('fTenant').value.trim();
+  const unit     = document.getElementById('fUnit').value.trim();
+  const location = document.getElementById('fLocation').value.trim();
+  const category = document.getElementById('fCategory').value;
+  const desc     = document.getElementById('fDesc').value.trim();
+  if(!tenant||!unit||!location||!category||!desc) {
+    showAlert('newWOAlert','Please fill all required fields'); return;
+  }
+  let attachURLs = '';
+  if(pendingFiles.attach?.length) {
+    showLoading('Uploading attachments...');
+    const urls = [];
+    for(const f of pendingFiles.attach) {
+      const up = await uploadFile(f,'requests');
+      if(up.fileUrl) urls.push(up.fileUrl);
+    }
+    attachURLs = urls.join(',');
+  }
+  showLoading('Creating work order...');
+  const res = await apiPost({ action:'createWorkOrder',
+    companyId:currentUser.companyId, tenantName:tenant, location, unitSpace:unit,
+    description:desc, category, urgency:document.getElementById('fUrgency').value,
+    idealCompletionDate:document.getElementById('fIdealDate').value,
+    raisedByRole:currentUser.role, raisedByUserId:currentUser.id,
+    attachmentURLs:attachURLs });
+  if(res.status === 'success') {
+    showToast('Work order '+res.referenceNumber+' created','success');
+    closeModal('modalNewWO');
+    resetNewWOForm();
+    pendingFiles.attach = [];
+    await loadAll();
+  } else showAlert('newWOAlert', res.message||'Failed to create');
+  hideLoading();
+}
+
+function resetNewWOForm() {
+  ['fTenant','fUnit','fLocation','fDesc','fIdealDate'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('fCategory').value = '';
+  document.getElementById('fUrgency').value  = 'Medium';
+  document.getElementById('attachName').textContent = '';
+}
+
+// ═══════════════════════════════════════════════════════
+// CONTRACTORS
+// ═══════════════════════════════════════════════════════
+function renderContractors() {
+  const tb = document.getElementById('conTable');
+  if(!tb) return;
+  const search = (document.getElementById('conSearch')?.value||'').toLowerCase();
+  const trade  = document.getElementById('conTrade')?.value||'';
+  let list = contractors.filter(c => {
+    const sm = !search || [c.Name,c.BusinessName,c.Email,c.Trade]
+      .some(x=>String(x||'').toLowerCase().includes(search));
+    return sm && (!trade || c.Trade===trade);
+  });
+  tb.innerHTML = list.length ? list.map(c=>`<tr>
+    <td>${c.Name||'—'}</td>
+    <td>${c.BusinessName||'—'}</td>
+    <td>${tradeBadge(c.Trade)}</td>
+    <td><a href="mailto:${c.Email}" style="color:var(--accent-light);font-size:13px">${c.Email||'—'}</a></td>
+    <td style="font-size:12px">${c.Phone||'—'}</td>
+    <td>${String(c.IsActive).toLowerCase()==='true' ? '<span class="badge b-approved">Active</span>' : '<span class="badge b-rejected">Inactive</span>'}</td>
+    <td><button class="btn btn-xs btn-ghost" onclick="alert('Edit coming in next iteration')">Edit</button></td>
+  </tr>`).join('') : emptyRow(7,'No contractors found');
+}
+
+async function saveContractor() {
+  const name  = document.getElementById('cName').value.trim();
+  const trade = document.getElementById('cTrade').value;
+  const email = document.getElementById('cEmail').value.trim();
+  if(!name||!trade||!email) {
+    showAlert('newConAlert','Name, trade and email are required'); return;
+  }
+  showLoading('Adding contractor...');
+  const res = await apiPost({ action:'createContractor', companyId:currentUser.companyId,
+    name, businessName:document.getElementById('cBusiness').value,
+    trade, email, phone:document.getElementById('cPhone').value,
+    notes:document.getElementById('cNotes').value });
+  if(res.status === 'success') {
+    showToast('Contractor added','success');
+    closeModal('modalNewContractor');
+    await loadAll();
+  } else showAlert('newConAlert', res.message||'Failed');
+  hideLoading();
+}
+
+function toggleContractor(el) { el.classList.toggle('selected'); }
+
+// ═══════════════════════════════════════════════════════
+// USERS
+// ═══════════════════════════════════════════════════════
+function renderUsers() {
+  const tb = document.getElementById('usersTable');
+  if(!tb) return;
+  const list = currentUser.role === 'super_admin'
+    ? users
+    : users.filter(u => u.CompanyID === currentUser.companyId);
+  tb.innerHTML = list.length ? list.map(u=>`<tr>
+    <td>${u.Name||'—'}</td>
+    <td style="font-size:12px;color:var(--text3)">${u.Email||'—'}</td>
+    <td><span class="role-chip role-${u.Role}">${u.Role?.replace('_',' ')||'—'}</span></td>
+    <td>${getCompanyName(u.CompanyID)}</td>
+    <td>${String(u.Active).toLowerCase()==='true' ? '<span class="badge b-approved">Active</span>' : '<span class="badge b-gray">Inactive</span>'}</td>
+  </tr>`).join('') : emptyRow(5,'No users found');
+}
+
+function populateCompanySelect() {
+  const sel = document.getElementById('uCompany');
+  if(!sel) return;
+  sel.innerHTML = companies.map(c=>`<option value="${c.CompanyID}">${c.CompanyName}</option>`).join('');
+}
+
+function getCompanyName(id) {
+  const c = companies.find(c=>c.CompanyID===id);
+  return c ? c.CompanyName : id||'—';
+}
+
+async function saveUser() {
+  const name = document.getElementById('uName').value.trim();
+  const email = document.getElementById('uEmail').value.trim();
+  const pw = document.getElementById('uPassword').value.trim();
+  const role = document.getElementById('uRole').value;
+  const companyId = document.getElementById('uCompany').value || currentUser.companyId;
+  if(!name||!email||!pw||!role) { showToast('All fields required','warning'); return; }
+  showLoading('Creating user...');
+  const res = await apiPost({ action:'createUser', companyId, name, email, password:pw, role });
+  if(res.status === 'success') {
+    showToast('User created','success');
+    closeModal('modalNewUser');
+    await loadAll(); renderUsers();
+  } else showToast(res.message||'Failed','error');
+  hideLoading();
+}
+
+// ═══════════════════════════════════════════════════════
+// AUDIT
+// ═══════════════════════════════════════════════════════
+function renderAudit(entries) {
+  const el = document.getElementById('auditTimeline');
+  if(!el) return;
+  if(!entries.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-title">No audit entries</div></div>'; return; }
+  el.innerHTML = entries.map(e => {
+    const col = auditDotColor(e.Action);
+    return `<div class="tl-item">
+      <div class="tl-dot tl-dot-${col}">●</div>
+      <div class="tl-content">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span class="tl-action">${formatAction(e.Action)}</span>
+          <span class="td-ref" style="font-size:11px">${e.WorkOrderID||''}</span>
+        </div>
+        ${e.Detail ? `<div class="tl-detail">${e.Detail}</div>` : ''}
+        <div class="tl-time">${e.ActorRole||''} · ${e.CreatedAt ? new Date(e.CreatedAt).toLocaleString('en-AU') : ''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// FILE UPLOAD
+// ═══════════════════════════════════════════════════════
+function handleSingleFile(input, type) {
+  const file = input.files[0];
+  if(!file) return;
+  if(file.size > 10*1024*1024) { showToast('Max file size 10MB','warning'); input.value=''; return; }
+  pendingFiles[type] = file;
+  const nameMap = { sow:'sowFileName', quote:'quoteFileName', masterQuote:'mqFileName', cq:'cqFileName' };
+  const nameEl = document.getElementById(nameMap[type] || type+'FileName');
+  if(nameEl) nameEl.textContent = '✓ '+file.name;
+}
+
+function handleMultiFile(input, type) {
+  const files = Array.from(input.files);
+  if(!files.length) return;
+  pendingFiles[type] = files;
+  const nameEl = document.getElementById(type+'Name');
+  if(nameEl) nameEl.textContent = '✓ '+files.length+' file(s) selected';
+}
+
+async function uploadFile(file, folderType) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = async e => {
+      try {
+        const base64 = e.target.result.split(',')[1];
+        const res = await apiPost({
+          action:'uploadFile', fileType:folderType,
+          fileName:file.name, mimeType:file.type, base64Data:base64
+        });
+        resolve(res);
+      } catch(err) { resolve({}); }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// HELPERS & UI UTILS
+// ═══════════════════════════════════════════════════════
+function slaHTML(wo) {
+  if(!wo.SLADeadline || !['New','In Review'].includes(wo.Status)) return '';
+  const diff = new Date(wo.SLADeadline) - Date.now();
+  if(diff < 0) return '<span class="sla-timer sla-breach">⚠ SLA breached</span>';
+  const h = Math.floor(diff/3600000);
+  const m = Math.floor((diff%3600000)/60000);
+  if(h < 4)  return `<span class="sla-timer sla-warn">⏱ ${h}h ${m}m left</span>`;
+  return `<span class="sla-timer sla-ok">⏱ ${h}h ${m}m left</span>`;
+}
+
+const STATUS_MAP = {
+  'New':'b-new','In Review':'b-review','SOW Sent':'b-sow',
+  'Contractor Assigned':'b-assigned','In Progress':'b-inprogress',
+  'Proof Submitted':'b-proof','Quote Prepared':'b-quoteprepared',
+  'Payment Pending':'b-pending','Paid':'b-paid','Complete':'b-complete',
+  'Sent':'b-sent','Quote Received':'b-received','Rejected':'b-rejected',
+  'Approved by PM':'b-approved','Pending PM Review':'b-pending',
+};
+function statusBadge(s) {
+  return `<span class="badge ${STATUS_MAP[s]||'b-gray'}">${s||'—'}</span>`;
+}
+
+const URGENCY_MAP = { Low:'b-low',Medium:'b-medium',High:'b-high',Emergency:'b-emergency' };
+function urgencyBadge(u) {
+  return `<span class="badge ${URGENCY_MAP[u]||'b-gray'}">${u||'—'}</span>`;
+}
+
+const TRADE_COLORS = { Electrical:'b-amber',Plumbing:'b-blue',HVAC:'b-teal',Carpentry:'b-review',
+  'General Maintenance':'b-gray', Other:'b-gray' };
+function tradeBadge(t) {
+  return `<span class="badge ${TRADE_COLORS[t]||'b-gray'}">${t||'—'}</span>`;
+}
+
+function winnerBadge() {
+  return '<span class="badge b-winner">🏆 Winner</span>';
+}
+
+function auditDotColor(action='') {
+  if(action.includes('CREATED'))  return 'purple';
+  if(action.includes('APPROVED')||action.includes('COMPLETE')||action.includes('PAID')) return 'green';
+  if(action.includes('REJECTED')) return 'red';
+  if(action.includes('SELECTED')||action.includes('SENT')) return 'amber';
+  return 'blue';
+}
+
+function formatAction(a='') {
+  return a.replace(/_/g,' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
+}
+
+function emptyRow(cols, msg) {
+  return `<tr><td colspan="${cols}"><div class="empty" style="padding:32px"><div class="empty-icon">📭</div><div class="empty-title">${msg}</div></div></td></tr>`;
+}
+
+function esc(s) { return String(s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/\n/g,' '); }
+
+function showAlert(id, msg) {
+  const el = document.getElementById(id);
+  if(el) { el.textContent = msg; el.style.display = 'block'; }
+}
+
+function openModal(id)  { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = type==='success'?'✓ '+msg : type==='error'?'✗ '+msg : '⚠ '+msg;
+  t.className   = 'toast show '+type;
+  setTimeout(()=>{ t.className='toast'; }, 3500);
+}
+
+function showLoading(msg='Loading...') {
+  document.getElementById('loadingText').textContent = msg;
+  document.getElementById('loadingOverlay').classList.add('show');
+}
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('show');
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+window.onload = () => {
+  pendingFiles = { attach:[], sow:null, quote:null, proof:[], masterQuote:null };
+  const saved = localStorage.getItem('womsUser');
+  if(saved) {
+    try {
+      currentUser = JSON.parse(saved);
+      showApp();
+    } catch(e) { localStorage.removeItem('womsUser'); }
+  }
+};
+</script>
+</body>
+</html>
