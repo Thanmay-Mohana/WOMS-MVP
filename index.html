@@ -941,7 +941,7 @@ async function openWODetail(woId) {
         html += `<div class="section-divider"></div>
         <div class="card-title">Send SOW to contractors</div>
         ${wo.SOWFileURL ? `<div style="margin-bottom:10px"><a class="proof-file" href="${wo.SOWFileURL}" target="_blank">📄 Current SOW</a></div>` : ''}
-        <div class="form-group"><label>Quote due date</label><input id="sowDueDate" type="date"/></div>
+        <div class="form-group"><label>Quote submission due date</label><input id="sowDueDate" type="date"/></div>
         <div style="margin-bottom:12px">
           ${tradeCons.length ? `<div style="font-size:12px;color:var(--text3);margin-bottom:8px">${wo.Category} contractors</div>
           <div class="contractor-grid">${tradeCons.map(c=>`
@@ -1311,7 +1311,7 @@ function renderContractorDetail(wo, sows, qts, proofs) {
         <div class="file-drop" onclick="document.getElementById('proofFileInput').click()">📎 Upload proof / invoice files<div class="file-name" id="proofName"></div></div>
         <input id="proofFileInput" type="file" style="display:none" multiple accept="image/*,.pdf,.doc,.docx" onchange="handleMultiFile(this,'proof')"/>
       </div>
-      <button class="btn btn-success" onclick="conSubmitProof('${wo.WorkOrderID}','${wo.CompanyID}')">Submit proof / invoice</button>
+      <button class="btn btn-success" onclick="conSubmitProof('${wo.WorkOrderID}','${wo.ReferenceNumber}','${wo.CompanyID}')">Submit proof / invoice</button>
     ` : ''}
   `;
 
@@ -1514,34 +1514,51 @@ async function clientApproveQuote(mqId, woId, ref, companyId, amount) {
 // ═══════════════════════════════════════════════════════
 async function conSubmitQuote(woId, companyId, sowId) {
   const amount = document.getElementById('cqAmount')?.value;
-  if(!amount) { showToast('Enter your quote amount','warning'); return; }
+  if (!amount) {
+    showToast('Enter your quote amount', 'warning');
+    return;
+  }
+
   let fileUrl = '';
   const quoteFile = pendingFiles.cq || pendingFiles.quote;
 
   if (quoteFile) {
-  showLoading('Uploading quote document...');
-  const up = await uploadFile(quoteFile, 'quotes');
-  fileUrl = up.fileUrl || '';
-  pendingFiles.cq = null;
-  pendingFiles.quote = null;
+    showLoading('Uploading quote document.');
+    const up = await uploadFile(quoteFile, 'quotes');
+    fileUrl = up.fileUrl || '';
+    pendingFiles.cq = null;
+    pendingFiles.quote = null;
   }
-  }
-  showLoading('Submitting quote...');
-  const res = await apiPost({ action:'submitQuote', workOrderId:woId, companyId, sowSendId:sowId,
+
+  showLoading('Submitting quote.');
+
+  const res = await apiPost({
+    action: 'submitQuote',
+    workOrderId: woId,
+    companyId,
+    sowSendId: sowId,
     contractorId: currentUser.contractorId || currentUser.id,
     contractorName: currentUser.name,
-    amount, gstStatus:document.getElementById('cqGST').value,
-    startDate:document.getElementById('cqStart').value,
-    endDate:document.getElementById('cqEnd').value,
-    notes:document.getElementById('cqNotes').value,
-    fileURL:fileUrl, enteredBy:'app' });
-  if(res.status === 'success') {
-    showToast('Quote submitted successfully','success');
-    await loadAll(); closeModal('modalWODetail'); openWODetail(woId);
-  } else showToast(res.message||'Failed','error');
+    amount,
+    gstStatus: document.getElementById('cqGST').value,
+    startDate: document.getElementById('cqStart').value,
+    endDate: document.getElementById('cqEnd').value,
+    notes: document.getElementById('cqNotes').value,
+    fileURL: fileUrl,
+    enteredBy: 'app'
+  });
+
+  if (res.status === 'success') {
+    showToast('Quote submitted successfully', 'success');
+    await loadAll();
+    closeModal('modalWODetail');
+    openWODetail(woId);
+  } else {
+    showToast(res.message || 'Failed', 'error');
+  }
+
   hideLoading();
 }
-
 async function conSubmitProof(woId, ref, companyId) {
   if(!pendingFiles.proof?.length) { showToast('Upload at least one proof file','warning'); return; }
   showLoading('Uploading proof files...');
