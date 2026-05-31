@@ -629,7 +629,6 @@ function buildNav() {
     ],
     contractor: [
       { id:'myjobs',      icon:'🔧', label:'My jobs' },
-      { id:'audit',       icon:'📊', label:'Activity' },
     ],
     client: [
       { id:'dashboard',   icon:'◈', label:'Dashboard' },
@@ -673,8 +672,10 @@ async function loadAll() {
   try {
     const u = currentUser;
     const params = { companyId: u.companyId, role: u.role, userId: u.id };
-    if(u.role === 'contractor') params.contractorId = u.id;
-
+    if(u.role === 'contractor') {
+      params.contractorId = u.contractorId || '';
+      params.email = u.email;
+    }  
     const [woRes, conRes] = await Promise.all([
       apiGet('getWorkOrders', params),
       apiGet('getContractors', { companyId: u.companyId })
@@ -791,42 +792,62 @@ function woRowHTML(w) {
 
 function renderMyRequests() {
   const tb = document.getElementById('myReqTable');
-  if(!tb) return;
+  if (!tb) return;
+
   const list = workOrders;
-  tb.innerHTML = list.length ? list.map(w=>`<tr>
-    <td><span class="td-ref">${w.ReferenceNumber||'—'}</span></td>
-    <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${w.Description||'—'}</td>
-    <td>${w.Category||'—'}</td>
-    <td>${urgencyBadge(w.Urgency)}</td>
-    <td>${statusBadge(w.Status)}</td>
-    <td>${w.CreatedAt ? new Date(w.CreatedAt).toLocaleDateString('en-AU') : '—'}</td>
-    <td><button class="btn btn-xs btn-secondary" onclick="openWODetail('${w.WorkOrderID}')">View</button></td>
-  </tr>`).join('') : emptyRow(7,'No requests yet — submit your first request using the button above');
+
+  tb.innerHTML = list.length ? list.map(w => {
+    const progress = customerProgress(w.Status);
+
+    return `<tr>
+      <td><span class="td-ref">${w.ReferenceNumber || '—'}</span></td>
+      <td style="max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${w.Description || '—'}</td>
+      <td>${w.Category || '—'}</td>
+      <td>${currentUser.role === 'tenant' ? urgencyBadge(w.Urgency) : progressBar(progress)}</td>
+      <td>${customerStatusBadge(w.Status)}</td>
+      <td>${w.CreatedAt ? new Date(w.CreatedAt).toLocaleDateString('en-AU') : '—'}</td>
+      <td><button class="btn btn-xs btn-secondary" onclick="openWODetail('${w.WorkOrderID}')">View</button></td>
+    </tr>`;
+  }).join('') : emptyRow(7, currentUser.role === 'client'
+    ? 'No open work orders yet'
+    : 'No requests yet — submit your first request using the button above');
 }
 
 async function renderMyJobs() {
   const tb = document.getElementById('myJobsTable');
-  if(!tb) return;
+  if (!tb) return;
+
   try {
-    const sowRes = await apiGet('getSOWSends', { contractorId: currentUser.id });
-    const qtRes  = await apiGet('getQuotes',   { contractorId: currentUser.id });
+    const contractorId = currentUser.contractorId || '';
+
+    const sowRes = await apiGet('getSOWSends', { contractorId });
+    const qtRes  = await apiGet('getQuotes',   { contractorId });
+
     const mySows = sowRes.data || [];
     const myQts  = qtRes.data  || [];
-    if(!mySows.length) { tb.innerHTML = emptyRow(6,'No job invitations yet'); return; }
+
+    if (!mySows.length) {
+      tb.innerHTML = emptyRow(6, 'No job invitations yet');
+      return;
+    }
+
     tb.innerHTML = mySows.map(s => {
-      const wo  = workOrders.find(w => w.WorkOrderID === s.WorkOrderID) || {};
-      const qt  = myQts.find(q => q.SOWSendID === s.SOWSendID);
-      const qAmt = qt ? '$'+qt.Amount : '—';
+      const wo = workOrders.find(w => String(w.WorkOrderID) === String(s.WorkOrderID)) || {};
+      const qt = myQts.find(q => String(q.SOWSendID) === String(s.SOWSendID));
+      const qAmt = qt ? '$' + Number(qt.Amount).toLocaleString() : 'Not submitted';
+
       return `<tr>
-        <td><span class="td-ref">${wo.ReferenceNumber||'—'}</span></td>
-        <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${wo.Description||'—'}</td>
-        <td>${wo.Category||'—'}</td>
-        <td>${statusBadge(s.Status)}</td>
+        <td><span class="td-ref">${wo.ReferenceNumber || '—'}</span></td>
+        <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${wo.Description || '—'}</td>
+        <td>${wo.Category || '—'}</td>
+        <td>${contractorFriendlyStatus(wo.Status, s.Status, qt)}</td>
         <td>${qAmt}</td>
-        <td><button class="btn btn-xs btn-secondary" onclick="openWODetail('${wo.WorkOrderID}')">View</button></td>
+        <td><button class="btn btn-xs btn-secondary" onclick="openWODetail('${wo.WorkOrderID}')">View job</button></td>
       </tr>`;
     }).join('');
-  } catch(e) {}
+  } catch (e) {
+    tb.innerHTML = emptyRow(6, 'Unable to load contractor jobs');
+  }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -851,6 +872,21 @@ async function openWODetail(woId) {
     const prfs  = prfRes.data || [];
     const mqs   = mqRes.data  || [];
     const role  = currentUser.role;
+    if (role === 'tenant') {
+       renderTenantDetail(wo);
+       hideLoading();
+       return;
+    }
+   if (role === 'client') {
+       renderClientDetail(wo, mqs);
+       hideLoading();
+       return;
+   }
+  if (role === 'contractor') {
+      renderContractorDetail(wo, sows, qts, prfs);
+      hideLoading();
+      return;
+   }
     const steps = ['New','In Review','SOW Sent','Contractor Assigned','In Progress','Proof Submitted','Quote Prepared','Payment Pending','Paid','Complete'];
     const curIdx = steps.indexOf(wo.Status);
 
@@ -1123,7 +1159,183 @@ async function openWODetail(woId) {
   } catch(e) { showToast('Error loading work order','error'); console.error(e); }
   hideLoading();
 }
+function renderTenantDetail(wo) {
+  const html = `
+    <div class="modal-title">${wo.ReferenceNumber || 'Work Order'}</div>
+    <div class="modal-sub">Your maintenance request</div>
 
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+      ${customerStatusBadge(wo.Status)}
+      ${progressBar(customerProgress(wo.Status))}
+    </div>
+
+    <div class="detail-grid">
+      <div class="detail-item"><label>Issue</label><div class="detail-value">${wo.Description || '—'}</div></div>
+      <div class="detail-item"><label>Location</label><div class="detail-value">${wo.Location || '—'}</div></div>
+      <div class="detail-item"><label>Unit / Space</label><div class="detail-value">${wo.UnitSpace || '—'}</div></div>
+      <div class="detail-item"><label>Category</label><div class="detail-value">${wo.Category || '—'}</div></div>
+      <div class="detail-item"><label>Urgency</label><div class="detail-value">${wo.Urgency || '—'}</div></div>
+      <div class="detail-item"><label>Submitted</label><div class="detail-value">${wo.CreatedAt ? new Date(wo.CreatedAt).toLocaleDateString('en-AU') : '—'}</div></div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <div class="card-title">Status update</div>
+    <div style="font-size:14px;color:var(--text2);line-height:1.7">
+      ${tenantStatusMessage(wo.Status)}
+    </div>
+  `;
+
+  document.getElementById('woDetailContent').innerHTML = html;
+  openModal('modalWODetail');
+}
+
+function renderClientDetail(wo, masterQuotes) {
+  const quoteReady = masterQuotes && masterQuotes.length ? masterQuotes[masterQuotes.length - 1] : null;
+
+  const html = `
+    <div class="modal-title">${wo.ReferenceNumber || 'Work Order'}</div>
+    <div class="modal-sub">${wo.TenantName || ''} · ${wo.Location || ''} · ${wo.UnitSpace || ''}</div>
+
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+      ${customerStatusBadge(wo.Status)}
+      ${progressBar(customerProgress(wo.Status))}
+    </div>
+
+    <div class="detail-grid">
+      <div class="detail-item"><label>Tenant</label><div class="detail-value">${wo.TenantName || '—'}</div></div>
+      <div class="detail-item"><label>Location</label><div class="detail-value">${wo.Location || '—'}</div></div>
+      <div class="detail-item"><label>Unit / Space</label><div class="detail-value">${wo.UnitSpace || '—'}</div></div>
+      <div class="detail-item"><label>Category</label><div class="detail-value">${wo.Category || '—'}</div></div>
+      <div class="detail-item"><label>Submitted</label><div class="detail-value">${wo.CreatedAt ? new Date(wo.CreatedAt).toLocaleDateString('en-AU') : '—'}</div></div>
+      <div class="detail-item"><label>Current stage</label><div class="detail-value">${customerStatus(wo.Status)}</div></div>
+    </div>
+
+    <div class="form-group">
+      <label style="font-size:10px;color:var(--text3)">Issue description</label>
+      <div style="font-size:13px;color:var(--text2);line-height:1.6">${wo.Description || '—'}</div>
+    </div>
+
+    ${quoteReady && String(quoteReady.ClientApproved).toLowerCase() !== 'true' ? `
+      <div class="section-divider"></div>
+      <div class="card-title">Quote ready for approval</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:12px">
+        A quote is ready for your review. Please open the file and approve when ready.
+      </div>
+      <div class="quote-card">
+        <div class="quote-amount">$${Number(quoteReady.Amount).toLocaleString()}</div>
+        ${quoteReady.FileURL ? `<a class="proof-file" href="${quoteReady.FileURL}" target="_blank">📎 View quote</a>` : ''}
+        <button class="btn btn-success btn-sm" style="margin-top:12px" onclick="clientApproveQuote('${quoteReady.MasterQuoteID}','${wo.WorkOrderID}','${wo.ReferenceNumber}','${wo.CompanyID}','${quoteReady.Amount}')">
+          Approve quote
+        </button>
+      </div>
+    ` : ''}
+
+    ${quoteReady && String(quoteReady.ClientApproved).toLowerCase() === 'true' ? `
+      <div class="section-divider"></div>
+      <div class="alert alert-success" style="display:block">
+        Quote approved. The team will continue processing this work order.
+      </div>
+    ` : ''}
+  `;
+
+  document.getElementById('woDetailContent').innerHTML = html;
+  openModal('modalWODetail');
+}
+
+function renderContractorDetail(wo, sows, qts, proofs) {
+  const contractorId = currentUser.contractorId || '';
+  const mySow = sows.find(s => String(s.ContractorID) === String(contractorId)) || sows[0];
+  const myQuote = qts.find(q => String(q.ContractorID) === String(contractorId));
+  const isWinner = myQuote && String(myQuote.IsWinner).toLowerCase() === 'true';
+
+  const html = `
+    <div class="modal-title">${wo.ReferenceNumber || 'Work Order'}</div>
+    <div class="modal-sub">${wo.Category || ''} · ${wo.Location || ''}</div>
+
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+      ${contractorFriendlyStatus(wo.Status, mySow?.Status, myQuote)}
+      ${mySow?.DueDate ? `<span class="badge b-pending">Quote due: ${mySow.DueDate}</span>` : ''}
+    </div>
+
+    <div class="detail-grid">
+      <div class="detail-item"><label>Category</label><div class="detail-value">${wo.Category || '—'}</div></div>
+      <div class="detail-item"><label>Location</label><div class="detail-value">${wo.Location || '—'}</div></div>
+      <div class="detail-item"><label>Unit / Space</label><div class="detail-value">${wo.UnitSpace || '—'}</div></div>
+      <div class="detail-item"><label>Quote submission due date</label><div class="detail-value">${mySow?.DueDate || 'ASAP'}</div></div>
+    </div>
+
+    <div class="form-group">
+      <label style="font-size:10px;color:var(--text3)">Work description</label>
+      <div style="font-size:13px;color:var(--text2);line-height:1.6">${wo.Description || '—'}</div>
+    </div>
+
+    ${wo.SOWFileURL ? `
+      <div style="margin-top:8px">
+        <label style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.5px">Scope document</label>
+        <div class="proof-files"><a class="proof-file" href="${wo.SOWFileURL}" target="_blank">📄 View SOW</a></div>
+      </div>
+    ` : ''}
+
+    ${!myQuote ? `
+      <div class="section-divider"></div>
+      <div class="card-title">Submit your quote</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Amount ($)</label><input id="cqAmount" type="number" placeholder="0.00"/></div>
+        <div class="form-group"><label>GST</label><select id="cqGST"><option>GST Included</option><option>GST Excluded</option><option>Not Applicable</option></select></div>
+        <div class="form-group"><label>Start date</label><input id="cqStart" type="date"/></div>
+        <div class="form-group"><label>End date</label><input id="cqEnd" type="date"/></div>
+        <div class="form-group full"><label>Notes</label><textarea id="cqNotes" style="min-height:60px"></textarea></div>
+        <div class="form-group full"><label>Quote document</label>
+          <div class="file-drop" onclick="document.getElementById('cqFileInput').click()">📎 Upload quote document<div class="file-name" id="cqFileName"></div></div>
+          <input id="cqFileInput" type="file" style="display:none" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onchange="handleSingleFile(this,'cq')"/>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="conSubmitQuote('${wo.WorkOrderID}','${wo.CompanyID}','${mySow?.SOWSendID || ''}')">Submit quote</button>
+    ` : `
+      <div class="section-divider"></div>
+      <div class="card-title">Your quote</div>
+      <div class="quote-card ${isWinner ? 'winner' : ''}">
+        <div class="quote-amount">$${Number(myQuote.Amount).toLocaleString()}</div>
+        <div style="font-size:12px;color:var(--text3)">${myQuote.GSTStatus || ''}</div>
+        ${myQuote.FileURL ? `<a class="proof-file" href="${myQuote.FileURL}" target="_blank" style="margin-top:8px">📎 View quote file</a>` : ''}
+        <div style="margin-top:10px">${isWinner ? winnerBadge() : '<span class="badge b-received">Submitted</span>'}</div>
+      </div>
+    `}
+
+    ${isWinner ? `
+      <div class="section-divider"></div>
+      <div class="card-title">Submit proof / invoice</div>
+      <div class="form-group">
+        <label>Upload proof photos or invoice</label>
+        <div class="file-drop" onclick="document.getElementById('proofFileInput').click()">📎 Upload proof / invoice files<div class="file-name" id="proofName"></div></div>
+        <input id="proofFileInput" type="file" style="display:none" multiple accept="image/*,.pdf,.doc,.docx" onchange="handleMultiFile(this,'proof')"/>
+      </div>
+      <button class="btn btn-success" onclick="conSubmitProof('${wo.WorkOrderID}','${wo.CompanyID}')">Submit proof / invoice</button>
+    ` : ''}
+  `;
+
+  document.getElementById('woDetailContent').innerHTML = html;
+  openModal('modalWODetail');
+}
+
+function tenantStatusMessage(status) {
+  const messages = {
+    'New': 'Your request has been received. The maintenance team will review it shortly.',
+    'In Review': 'Your request is currently being reviewed by the maintenance team.',
+    'SOW Sent': 'The team is arranging the required work.',
+    'Contractor Assigned': 'A contractor has been arranged for this request.',
+    'In Progress': 'The work is currently in progress.',
+    'Proof Submitted': 'The completed work is being checked.',
+    'Quote Prepared': 'The request is being processed.',
+    'Payment Pending': 'The request is being processed.',
+    'Paid': 'The job is being finalised.',
+    'Complete': 'This request has been completed.'
+  };
+
+  return messages[status] || 'Your request is currently being processed.';
+}
+  
 // ═══════════════════════════════════════════════════════
 // PM ACTIONS
 // ═══════════════════════════════════════════════════════
@@ -1430,9 +1642,13 @@ async function saveContractor() {
     trade, email, phone:document.getElementById('cPhone').value,
     notes:document.getElementById('cNotes').value });
   if(res.status === 'success') {
-    showToast('Contractor added','success');
-    closeModal('modalNewContractor');
-    await loadAll();
+    const loginMsg = res.userCreated
+    ? `Contractor added. Login: ${res.loginEmail} | Password: ${res.tempPassword}`
+    : 'Contractor added. Existing user login found for this email.';
+
+  showToast(loginMsg, 'success');
+  closeModal('modalNewContractor');
+  await loadAll();
   } else showAlert('newConAlert', res.message||'Failed');
   hideLoading();
 }
@@ -1567,6 +1783,64 @@ const STATUS_MAP = {
   'Sent':'b-sent','Quote Received':'b-received','Rejected':'b-rejected',
   'Approved by PM':'b-approved','Pending PM Review':'b-pending',
 };
+const CUSTOMER_STATUS_MAP = {
+  'New': 'Request received',
+  'In Review': 'Under review',
+  'SOW Sent': 'Work being arranged',
+  'Contractor Assigned': 'Contractor arranged',
+  'In Progress': 'Work in progress',
+  'Proof Submitted': 'Work being checked',
+  'Quote Prepared': 'Quote ready for approval',
+  'Payment Pending': 'Awaiting payment confirmation',
+  'Paid': 'Finalising',
+  'Complete': 'Completed'
+};
+
+const CUSTOMER_PROGRESS_MAP = {
+  'New': 10,
+  'In Review': 20,
+  'SOW Sent': 35,
+  'Contractor Assigned': 50,
+  'In Progress': 65,
+  'Proof Submitted': 75,
+  'Quote Prepared': 85,
+  'Payment Pending': 90,
+  'Paid': 95,
+  'Complete': 100
+};
+
+function customerStatus(status) {
+  return CUSTOMER_STATUS_MAP[status] || 'In progress';
+}
+
+function customerProgress(status) {
+  return CUSTOMER_PROGRESS_MAP[status] || 10;
+}
+
+function customerStatusBadge(status) {
+  return `<span class="badge ${STATUS_MAP[status] || 'b-gray'}">${customerStatus(status)}</span>`;
+}
+
+function progressBar(percent) {
+  const p = Number(percent || 0);
+
+  return `
+    <div style="min-width:130px">
+      <div style="height:7px;background:var(--surface2);border-radius:99px;overflow:hidden;border:1px solid var(--border)">
+        <div style="height:100%;width:${p}%;background:linear-gradient(90deg,var(--accent),var(--teal));border-radius:99px"></div>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-top:4px">${p}% progress</div>
+    </div>
+  `;
+}
+
+function contractorFriendlyStatus(workOrderStatus, sowStatus, quote) {
+  if (!quote) return '<span class="badge b-sent">Quote requested</span>';
+  if (String(quote.IsWinner).toLowerCase() === 'true') return '<span class="badge b-winner">Selected for work</span>';
+  if (workOrderStatus === 'SOW Sent') return '<span class="badge b-received">Quote submitted</span>';
+  if (workOrderStatus === 'Complete') return '<span class="badge b-complete">Completed</span>';
+  return `<span class="badge ${STATUS_MAP[workOrderStatus] || 'b-gray'}">${workOrderStatus || sowStatus || 'In progress'}</span>`;
+}
 function statusBadge(s) {
   return `<span class="badge ${STATUS_MAP[s]||'b-gray'}">${s||'—'}</span>`;
 }
