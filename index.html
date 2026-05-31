@@ -1516,15 +1516,20 @@ async function conSubmitQuote(woId, companyId, sowId) {
   const amount = document.getElementById('cqAmount')?.value;
   if(!amount) { showToast('Enter your quote amount','warning'); return; }
   let fileUrl = '';
-  if(pendingFiles.quote) {
-    showLoading('Uploading quote document...');
-    const up = await uploadFile(pendingFiles.quote, 'quotes');
-    fileUrl = up.fileUrl || '';
-    pendingFiles.quote = null;
+  const quoteFile = pendingFiles.cq || pendingFiles.quote;
+
+  if (quoteFile) {
+  showLoading('Uploading quote document...');
+  const up = await uploadFile(quoteFile, 'quotes');
+  fileUrl = up.fileUrl || '';
+  pendingFiles.cq = null;
+  pendingFiles.quote = null;
+  }
   }
   showLoading('Submitting quote...');
   const res = await apiPost({ action:'submitQuote', workOrderId:woId, companyId, sowSendId:sowId,
-    contractorId:currentUser.id, contractorName:currentUser.name,
+    contractorId: currentUser.contractorId || currentUser.id,
+    contractorName: currentUser.name,
     amount, gstStatus:document.getElementById('cqGST').value,
     startDate:document.getElementById('cqStart').value,
     endDate:document.getElementById('cqEnd').value,
@@ -1547,7 +1552,8 @@ async function conSubmitProof(woId, ref, companyId) {
   }
   showLoading('Submitting proof...');
   const res = await apiPost({ action:'submitProof', workOrderId:woId, companyId,
-    referenceNumber:ref, contractorId:currentUser.id, contractorName:currentUser.name,
+    referenceNumber:ref, contractorId: currentUser.contractorId || currentUser.id,
+    contractorName: currentUser.name,
     fileURLs:urls });
   if(res.status === 'success') {
     showToast('Proof submitted — PM notified','success');
